@@ -22,4 +22,5 @@ This project provides an Obsidian desktop-only plugin that exports markdown note
 ## Status
 
 - IMPLEMENTED: Initial project scaffold (manifest, package.json, TypeScript entrypoint).
-- PLANNED: Template registry, validation engine, export runner, BRAT-ready releases and tags.
+- IMPLEMENTED: GitHub repository with tagged version v0.1.1 suitable for BRAT (includes compiled main.js).
+- PLANNED: Template registry, validation engine, export runner, additional templates.
