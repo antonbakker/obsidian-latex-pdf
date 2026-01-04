@@ -110,8 +110,6 @@ var PrintModal = class extends import_obsidian2.Modal {
     this.file = options.file;
     this.template = options.template;
     this.onExport = options.onExport;
-    this.outputFolder = options.initialOutputFolder;
-    this.outputFilename = options.initialOutputFilename;
   }
   onOpen() {
     const { contentEl } = this;
@@ -124,17 +122,7 @@ var PrintModal = class extends import_obsidian2.Modal {
       text: `Template: ${this.template.label} (${this.template.id})`
     });
     contentEl.createEl("p", {
-      text: "Choose where to store the generated PDF (inside your vault), then click Export."
-    });
-    new import_obsidian2.Setting(contentEl).setName("Output folder (in vault)").setDesc("Vault-relative folder path, e.g. 'Exports' or 'notes/exports'.").addText((text) => {
-      text.setPlaceholder("Exports").setValue(this.outputFolder).onChange((value) => {
-        this.outputFolder = value;
-      });
-    });
-    new import_obsidian2.Setting(contentEl).setName("Output filename").setDesc("Filename without extension. '.pdf' will be added automatically.").addText((text) => {
-      text.setPlaceholder(this.file.basename).setValue(this.outputFilename).onChange((value) => {
-        this.outputFilename = value;
-      });
+      text: "Review the note and template, then click Export to generate a PDF using your local pandoc and LaTeX installation."
     });
     const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
     new import_obsidian2.Setting(buttonBar).addButton((btn) => {
@@ -143,10 +131,7 @@ var PrintModal = class extends import_obsidian2.Modal {
       });
     }).addExtraButton((btn) => {
       btn.setIcon("printer").setTooltip("Export to LaTeX PDF").onClick(() => {
-        this.onExport({
-          outputFolder: this.outputFolder,
-          outputFilename: this.outputFilename
-        });
+        this.onExport();
       });
     });
   }
@@ -163,7 +148,7 @@ var fs = __toESM(require("fs/promises"));
 var os = __toESM(require("os"));
 var path = __toESM(require("path"));
 var execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
-async function exportNoteToPdf(app, file, template, settings, target) {
+async function exportNoteToPdf(app, file, template, settings) {
   const { pandocPath, pdfEngine } = settings;
   const content = await app.vault.read(file);
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "obsidian-latex-pdf-"));
@@ -186,30 +171,7 @@ async function exportNoteToPdf(app, file, template, settings, target) {
     new import_obsidian3.Notice("LaTeX PDF export failed. Check console for details.");
     return;
   }
-  if (target?.vaultPath) {
-    try {
-      const pdfBytes = await fs.readFile(outputPath);
-      const vaultPath = target.vaultPath;
-      const vault = app.vault;
-      const lastSlash = vaultPath.lastIndexOf("/");
-      const folderPath = lastSlash > 0 ? vaultPath.substring(0, lastSlash) : "";
-      if (folderPath && !vault.getAbstractFileByPath(folderPath)) {
-        await vault.createFolder(folderPath);
-      }
-      const existing = vault.getAbstractFileByPath(vaultPath);
-      if (existing instanceof import_obsidian3.TFile) {
-        await vault.modifyBinary(existing, pdfBytes);
-      } else {
-        await vault.createBinary(vaultPath, pdfBytes);
-      }
-      new import_obsidian3.Notice(`LaTeX PDF exported to: ${vaultPath}`);
-    } catch (error) {
-      console.error("Failed to copy LaTeX PDF into vault", error);
-      new import_obsidian3.Notice("LaTeX PDF was generated, but copying into the vault failed.");
-    }
-  } else {
-    new import_obsidian3.Notice(`LaTeX PDF exported to temporary file: ${outputPath}`);
-  }
+  new import_obsidian3.Notice(`LaTeX PDF exported to temporary file: ${outputPath}`);
 }
 
 // src/main.ts
@@ -301,14 +263,10 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
       new import_obsidian4.Notice(`Template '${templateId}' is not available.`);
       return;
     }
-    const defaultFolder = file.parent?.path ?? "Exports";
-    const defaultFilename = `${file.basename}-${template.id}`;
     const modal = new PrintModal(this.app, {
       file,
       template,
-      initialOutputFolder: defaultFolder,
-      initialOutputFilename: defaultFilename,
-      onExport: async ({ outputFolder, outputFilename }) => {
+      onExport: async () => {
         if (this.settings.exportBackend === "pandoc-plugin") {
           const cmdId = this.settings.pandocCommandId;
           if (!cmdId) {
@@ -324,19 +282,10 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
             );
           }
         } else {
-          const folder = outputFolder?.trim() || defaultFolder;
-          const baseName = outputFilename?.trim() || defaultFilename;
-          const vaultPath = folder ? `${folder}/${baseName}.pdf` : `${baseName}.pdf`;
-          await exportNoteToPdf(
-            this.app,
-            file,
-            template,
-            {
-              pandocPath: this.settings.pandocPath,
-              pdfEngine: this.settings.pdfEngine
-            },
-            { vaultPath }
-          );
+          await exportNoteToPdf(this.app, file, template, {
+            pandocPath: this.settings.pandocPath,
+            pdfEngine: this.settings.pdfEngine
+          });
         }
       }
     });

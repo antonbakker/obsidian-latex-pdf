@@ -131,15 +131,10 @@ export default class LatexPdfPlugin extends Plugin {
       return;
     }
 
-    const defaultFolder = file.parent?.path ?? "Exports";
-    const defaultFilename = `${file.basename}-${template.id}`;
-
     const modal = new PrintModal(this.app, {
       file,
       template,
-      initialOutputFolder: defaultFolder,
-      initialOutputFilename: defaultFilename,
-      onExport: async ({ outputFolder, outputFilename }) => {
+      onExport: async () => {
         if (this.settings.exportBackend === "pandoc-plugin") {
           const cmdId = this.settings.pandocCommandId;
           if (!cmdId) {
@@ -155,20 +150,10 @@ export default class LatexPdfPlugin extends Plugin {
             );
           }
         } else {
-          const folder = outputFolder?.trim() || defaultFolder;
-          const baseName = outputFilename?.trim() || defaultFilename;
-          const vaultPath = folder ? `${folder}/${baseName}.pdf` : `${baseName}.pdf`;
-
-          await exportNoteToPdf(
-            this.app,
-            file,
-            template,
-            {
-              pandocPath: this.settings.pandocPath,
-              pdfEngine: this.settings.pdfEngine,
-            },
-            { vaultPath },
-          );
+          await exportNoteToPdf(this.app, file, template, {
+            pandocPath: this.settings.pandocPath,
+            pdfEngine: this.settings.pdfEngine,
+          });
         }
       },
     });

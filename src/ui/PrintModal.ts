@@ -4,13 +4,7 @@ import type { TemplateDefinition } from "../templateRegistry";
 export interface PrintModalOptions {
   file: TFile;
   template: TemplateDefinition;
-  initialOutputFolder: string;
-  initialOutputFilename: string;
-  /**
-   * Called when the user clicks Export. The callback receives the desired
-   * vault-relative folder and filename (without extension) for the output.
-   */
-  onExport: (options: { outputFolder: string; outputFilename: string }) => void;
+  onExport: () => void;
 }
 
 /**
@@ -21,17 +15,13 @@ export interface PrintModalOptions {
 export class PrintModal extends Modal {
   private readonly file: TFile;
   private readonly template: TemplateDefinition;
-  private readonly onExport: (options: { outputFolder: string; outputFilename: string }) => void;
-  private outputFolder: string;
-  private outputFilename: string;
+  private readonly onExport: () => void;
 
   constructor(app: App, options: PrintModalOptions) {
     super(app);
     this.file = options.file;
     this.template = options.template;
     this.onExport = options.onExport;
-    this.outputFolder = options.initialOutputFolder;
-    this.outputFilename = options.initialOutputFilename;
   }
 
   onOpen(): void {
@@ -50,32 +40,8 @@ export class PrintModal extends Modal {
 
     contentEl.createEl("p", {
       text:
-        "Choose where to store the generated PDF (inside your vault), then click Export.",
+        "Review the note and template, then click Export to generate a PDF using your local pandoc and LaTeX installation.",
     });
-
-    new Setting(contentEl)
-      .setName("Output folder (in vault)")
-      .setDesc("Vault-relative folder path, e.g. 'Exports' or 'notes/exports'.")
-      .addText((text) => {
-        text
-          .setPlaceholder("Exports")
-          .setValue(this.outputFolder)
-          .onChange((value) => {
-            this.outputFolder = value;
-          });
-      });
-
-    new Setting(contentEl)
-      .setName("Output filename")
-      .setDesc("Filename without extension. '.pdf' will be added automatically.")
-      .addText((text) => {
-        text
-          .setPlaceholder(this.file.basename)
-          .setValue(this.outputFilename)
-          .onChange((value) => {
-            this.outputFilename = value;
-          });
-      });
 
     const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
 
@@ -90,10 +56,7 @@ export class PrintModal extends Modal {
           .setIcon("printer")
           .setTooltip("Export to LaTeX PDF")
           .onClick(() => {
-            this.onExport({
-              outputFolder: this.outputFolder,
-              outputFilename: this.outputFilename,
-            });
+            this.onExport();
           });
       });
   }
