@@ -23,5 +23,5 @@ This project provides an Obsidian desktop-only plugin that exports markdown note
 
 - IMPLEMENTED: Initial project scaffold (manifest, package.json, TypeScript entrypoint).
 - IMPLEMENTED: GitHub repository with tagged version v0.1.1 suitable for BRAT (includes compiled main.js).
-- IMPLEMENTED: Basic template registry, More options menu integration, and print modal UI wired to a pandoc/LaTeX export runner.
+- IMPLEMENTED: Basic template registry, More options menu integration, and print modal UI wired to either a direct pandoc runner or the existing Pandoc plugin.
 - PLANNED: Validation engine and additional templates.

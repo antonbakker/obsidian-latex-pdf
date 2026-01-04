@@ -13,16 +13,22 @@ import { TemplatePickerModal } from "./ui/TemplatePickerModal";
 import { PrintModal } from "./ui/PrintModal";
 import { exportNoteToPdf } from "./exportRunner";
 
+type ExportBackend = "direct" | "pandoc-plugin";
+
 interface LatexPdfPluginSettings {
   pandocPath: string;
   pdfEngine: "xelatex" | "lualatex" | "pdflatex";
   defaultTemplateId: string;
+  exportBackend: ExportBackend;
+  pandocCommandId: string; // command ID from the existing Pandoc plugin
 }
 
 const DEFAULT_SETTINGS: LatexPdfPluginSettings = {
   pandocPath: "pandoc",
   pdfEngine: "xelatex",
   defaultTemplateId: "kaobook",
+  exportBackend: "pandoc-plugin",
+  pandocCommandId: "",
 };
 
 export default class LatexPdfPlugin extends Plugin {
@@ -129,10 +135,26 @@ export default class LatexPdfPlugin extends Plugin {
       file,
       template,
       onExport: async () => {
-        await exportNoteToPdf(this.app, file, template, {
-          pandocPath: this.settings.pandocPath,
-          pdfEngine: this.settings.pdfEngine,
-        });
+        if (this.settings.exportBackend === "pandoc-plugin") {
+          const cmdId = this.settings.pandocCommandId;
+          if (!cmdId) {
+            new Notice(
+              "No Pandoc plugin command configured. Set it in the Obsidian LaTeX PDF settings.",
+            );
+            return;
+          }
+          const ok = this.app.commands.executeCommandById(cmdId);
+          if (!ok) {
+            new Notice(
+              `Could not execute Pandoc plugin command '${cmdId}'. Check that the Pandoc plugin is installed and the command ID is correct.`,
+            );
+          }
+        } else {
+          await exportNoteToPdf(this.app, file, template, {
+            pandocPath: this.settings.pandocPath,
+            pdfEngine: this.settings.pdfEngine,
+          });
+        }
       },
     });
     modal.open();
@@ -151,11 +173,12 @@ class LatexPdfSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Obsidian LaTeX PDF Settings" });
+    contentEl.createEl("h2", { text: "Obsidian LaTeX PDF Settings" });
 
+      // Direct pandoc settings (only relevant when using the direct backend)
     new Setting(containerEl)
       .setName("Pandoc executable path")
-      .setDesc("Path to the pandoc executable (leave as 'pandoc' if it is on your PATH).")
+      .setDesc("Path to the pandoc executable (used for the direct backend; ignored when using the Pandoc plugin backend).")
       .addText((text) =>
         text
           .setPlaceholder("pandoc")
@@ -167,8 +190,9 @@ class LatexPdfSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+    new Setting(containerEl)
       .setName("PDF engine")
-      .setDesc("LaTeX engine used by pandoc to generate PDFs.")
+      .setDesc("LaTeX engine used by pandoc to generate PDFs (direct backend only).")
       .addDropdown((dropdown) => {
         dropdown.addOption("xelatex", "XeLaTeX");
         dropdown.addOption("lualatex", "LuaLaTeX");
@@ -199,5 +223,43 @@ class LatexPdfSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         });
       });
+
+    // When using the Pandoc plugin backend, let the user select the command to execute.
+    if (this.plugin.settings.exportBackend === "pandoc-plugin") {
+      const commands = this.app.commands
+        .listCommands()
+        .filter((c) => c.name.toLowerCase().includes("pandoc"));
+
+      const description = commands.length
+        ? "Select the Pandoc plugin command that generates a PDF (as configured in the Pandoc plugin)."
+        : "No commands containing 'pandoc' were found. Ensure the Pandoc plugin is installed and enabled.";
+
+      new Setting(containerEl)
+        .setName("Pandoc plugin command")
+        .setDesc(description)
+        .addDropdown((dropdown) => {
+          if (!commands.length) {
+            dropdown.addOption("", "No Pandoc commands detected");
+            dropdown.setDisabled(true);
+            return;
+          }
+
+          for (const cmd of commands) {
+            dropdown.addOption(cmd.id, cmd.name);
+          }
+
+          const current = this.plugin.settings.pandocCommandId;
+          if (current && commands.some((c) => c.id === current)) {
+            dropdown.setValue(current);
+          } else {
+            dropdown.setValue(commands[0].id);
+          }
+
+          dropdown.onChange(async (value) => {
+            this.plugin.settings.pandocCommandId = value;
+            await this.plugin.saveSettings();
+          });
+        });
+    }
   }
 }
