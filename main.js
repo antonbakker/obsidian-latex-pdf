@@ -127,6 +127,7 @@ var PrintModal = class extends import_obsidian2.Modal {
     super(app);
     this.file = options.file;
     this.template = options.template;
+    this.validation = options.validation;
     this.onExport = options.onExport;
   }
   onOpen() {
@@ -142,6 +143,24 @@ var PrintModal = class extends import_obsidian2.Modal {
     contentEl.createEl("p", {
       text: "Review the note and template, then click Export to generate a PDF using your local pandoc and LaTeX installation."
     });
+    if (this.validation) {
+      const box = contentEl.createDiv({ cls: "latex-pdf-validation" });
+      const { issues, isValid } = this.validation;
+      box.createEl("h3", { text: "Template validation" });
+      if (!issues.length) {
+        box.createEl("p", { text: "No validation issues detected for this template." });
+      } else {
+        const errorCount = issues.filter((i) => i.level === "error").length;
+        const warningCount = issues.filter((i) => i.level === "warning").length;
+        const summary = isValid ? `Validation completed with ${warningCount} warning(s).` : `Validation found ${errorCount} error(s) and ${warningCount} warning(s). Fix errors before exporting if possible.`;
+        box.createEl("p", { text: summary });
+        const list = box.createEl("ul");
+        for (const issue of issues) {
+          const li = list.createEl("li");
+          li.textContent = `${issue.level.toUpperCase()}: ${issue.message}`;
+        }
+      }
+    }
     const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
     new import_obsidian2.Setting(buttonBar).addButton((btn) => {
       btn.setButtonText("Close").onClick(() => {
@@ -192,6 +211,58 @@ async function exportNoteToPdf(app, file, template, settings) {
     return;
   }
   new import_obsidian3.Notice(`LaTeX PDF exported to temporary file: ${outputPath}`);
+}
+
+// src/validation/validator.ts
+async function validateFileForTemplate(app, file, template) {
+  const cache = app.metadataCache.getFileCache(file);
+  const frontmatter = cache?.frontmatter;
+  const issues = [];
+  if (!frontmatter) {
+    issues.push({
+      level: "error",
+      message: "No YAML frontmatter found. Add a frontmatter block at the top of the note using '---' lines."
+    });
+    return { isValid: false, issues };
+  }
+  const get = (key) => frontmatter[key];
+  if (!get("title")) {
+    issues.push({
+      level: "error",
+      message: "Missing 'title' in frontmatter."
+    });
+  }
+  if (!get("author")) {
+    issues.push({
+      level: "warning",
+      message: "Missing 'author' in frontmatter. It is recommended to set an author for academic documents."
+    });
+  }
+  if (template.kind === "thesis") {
+    if (!get("university")) {
+      issues.push({
+        level: "warning",
+        message: "Thesis template: 'university' is not set in frontmatter. Consider adding university: <name>."
+      });
+    }
+    if (!get("abstract")) {
+      issues.push({
+        level: "warning",
+        message: "Thesis template: 'abstract' is not set. Add an 'abstract' field in frontmatter or a dedicated Abstract section."
+      });
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(frontmatter, "client")) {
+    const client = get("client");
+    if (!client || typeof client === "string" && client.trim() === "") {
+      issues.push({
+        level: "warning",
+        message: "'client' is defined but empty. Either remove it or set a non-empty identifier (e.g. 'acme')."
+      });
+    }
+  }
+  const hasError = issues.some((i) => i.level === "error");
+  return { isValid: !hasError, issues };
 }
 
 // src/main.ts
@@ -277,15 +348,17 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
     }
     this.openPrintModal(file, template.id);
   }
-  openPrintModal(file, templateId) {
+  async openPrintModal(file, templateId) {
     const template = getTemplateById(templateId);
     if (!template) {
       new import_obsidian4.Notice(`Template '${templateId}' is not available.`);
       return;
     }
+    const validation = await validateFileForTemplate(this.app, file, template);
     const modal = new PrintModal(this.app, {
       file,
       template,
+      validation,
       onExport: async () => {
         if (this.settings.exportBackend === "pandoc-plugin") {
           const cmdId = this.settings.pandocCommandId;

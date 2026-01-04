@@ -12,6 +12,7 @@ import { getAvailableTemplates, getTemplateById } from "./templateRegistry";
 import { TemplatePickerModal } from "./ui/TemplatePickerModal";
 import { PrintModal } from "./ui/PrintModal";
 import { exportNoteToPdf } from "./exportRunner";
+import { validateFileForTemplate } from "./validation/validator";
 
 type ExportBackend = "direct" | "pandoc-plugin";
 
@@ -124,16 +125,19 @@ export default class LatexPdfPlugin extends Plugin {
     this.openPrintModal(file, template.id);
   }
 
-  private openPrintModal(file: TFile, templateId: string) {
+  private async openPrintModal(file: TFile, templateId: string) {
     const template = getTemplateById(templateId);
     if (!template) {
       new Notice(`Template '${templateId}' is not available.`);
       return;
     }
 
+    const validation = await validateFileForTemplate(this.app, file, template);
+
     const modal = new PrintModal(this.app, {
       file,
       template,
+      validation,
       onExport: async () => {
         if (this.settings.exportBackend === "pandoc-plugin") {
           const cmdId = this.settings.pandocCommandId;

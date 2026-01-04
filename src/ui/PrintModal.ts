@@ -1,26 +1,25 @@
 import { App, Modal, Setting, TFile } from "obsidian";
 import type { TemplateDefinition } from "../templateRegistry";
+import type { ValidationResult } from "../validation/validator";
 
 export interface PrintModalOptions {
   file: TFile;
   template: TemplateDefinition;
+  validation?: ValidationResult;
   onExport: () => void;
 }
 
-/**
- * PrintModal is the main UI entry for exporting a note via a LaTeX template.
- * It currently displays basic information and provides an Export button that
- * triggers the pandoc/LaTeX export pipeline provided by the caller.
- */
 export class PrintModal extends Modal {
   private readonly file: TFile;
   private readonly template: TemplateDefinition;
+  private readonly validation?: ValidationResult;
   private readonly onExport: () => void;
 
   constructor(app: App, options: PrintModalOptions) {
     super(app);
     this.file = options.file;
     this.template = options.template;
+    this.validation = options.validation;
     this.onExport = options.onExport;
   }
 
@@ -42,6 +41,33 @@ export class PrintModal extends Modal {
       text:
         "Review the note and template, then click Export to generate a PDF using your local pandoc and LaTeX installation.",
     });
+
+    // Validation summary (if available)
+    if (this.validation) {
+      const box = contentEl.createDiv({ cls: "latex-pdf-validation" });
+      const { issues, isValid } = this.validation;
+
+      box.createEl("h3", { text: "Template validation" });
+
+      if (!issues.length) {
+        box.createEl("p", { text: "No validation issues detected for this template." });
+      } else {
+        const errorCount = issues.filter((i) => i.level === "error").length;
+        const warningCount = issues.filter((i) => i.level === "warning").length;
+
+        const summary = isValid
+          ? `Validation completed with ${warningCount} warning(s).`
+          : `Validation found ${errorCount} error(s) and ${warningCount} warning(s). Fix errors before exporting if possible.`;
+
+        box.createEl("p", { text: summary });
+
+        const list = box.createEl("ul");
+        for (const issue of issues) {
+          const li = list.createEl("li");
+          li.textContent = `${issue.level.toUpperCase()}: ${issue.message}`;
+        }
+      }
+    }
 
     const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
 

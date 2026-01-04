@@ -9,6 +9,11 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 
+% Optional client-specific configuration
+$if(client)$
+  \IfFileExists{clients/$client$/preamble.tex}{\input{clients/$client$/preamble.tex}}{}
+$endif$
+
 % Thesis-specific metadata (optional)
 $if(university)$
   \publisher{$university$}

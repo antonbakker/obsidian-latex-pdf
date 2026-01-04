@@ -18,6 +18,12 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 
+% Optional client-specific configuration
+$if(client)$
+  % If a client-specific preamble exists, include it.
+  \IfFileExists{clients/$client$/preamble.tex}{\input{clients/$client$/preamble.tex}}{}
+$endif$
+
 % Metadata from Pandoc
 $if(title)$
   \title{$title$}
