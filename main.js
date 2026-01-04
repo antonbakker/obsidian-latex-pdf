@@ -38,14 +38,32 @@ var import_obsidian4 = require("obsidian");
 // src/templateRegistry.ts
 var TEMPLATES = [
   {
-    id: "kaobook",
-    label: "Kaobook (book layout)",
-    description: "Book-style LaTeX template based on the kaobook class, suitable for longer structured documents."
+    id: "article",
+    label: "Article (A4)",
+    description: "Standard A4 article-style template based on KOMA scrartcl, suitable for shorter papers and reports.",
+    kind: "article",
+    pandocTemplateRelativePath: "templates/article/template.tex"
   },
   {
-    id: "article",
-    label: "Article",
-    description: "Standard LaTeX article-style template, suitable for shorter papers and reports."
+    id: "report",
+    label: "Report (A4)",
+    description: "Standard A4 report-style template based on KOMA scrreprt, suitable for longer technical reports.",
+    kind: "report",
+    pandocTemplateRelativePath: "templates/report/template.tex"
+  },
+  {
+    id: "kaobook",
+    label: "Kaobook (book layout, A4)",
+    description: "Book-style A4 template based on the kaobook class, suitable for books and long structured documents.",
+    kind: "book",
+    pandocTemplateRelativePath: "templates/kaobook/template.tex"
+  },
+  {
+    id: "thesis-kaobook",
+    label: "Thesis (kaobook, A4)",
+    description: "Thesis/dissertation template built on kaobook, with abstract and acknowledgements front matter.",
+    kind: "thesis",
+    pandocTemplateRelativePath: "templates/thesis-kaobook/template.tex"
   }
 ];
 function getAvailableTemplates() {
@@ -159,11 +177,13 @@ async function exportNoteToPdf(app, file, template, settings) {
     inputPath,
     "--from=markdown+tex_math_dollars+raw_tex+link_attributes",
     "--pdf-engine",
-    pdfEngine,
-    // TODO: wire real pandoc template file per TemplateDefinition.
-    "-o",
-    outputPath
+    pdfEngine
   ];
+  if (template.pandocTemplateRelativePath) {
+    const templatePath = path.join(__dirname, template.pandocTemplateRelativePath);
+    args.push("--template", templatePath);
+  }
+  args.push("-o", outputPath);
   try {
     await execFileAsync(pandocPath, args, { cwd: tempDir });
   } catch (error) {

@@ -40,10 +40,14 @@ export async function exportNoteToPdf(
     "--from=markdown+tex_math_dollars+raw_tex+link_attributes",
     "--pdf-engine",
     pdfEngine,
-    // TODO: wire real pandoc template file per TemplateDefinition.
-    "-o",
-    outputPath,
   ];
+
+  if (template.pandocTemplateRelativePath) {
+    const templatePath = path.join(__dirname, template.pandocTemplateRelativePath);
+    args.push("--template", templatePath);
+  }
+
+  args.push("-o", outputPath);
 
   try {
     await execFileAsync(pandocPath, args, { cwd: tempDir });

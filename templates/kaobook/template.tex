@@ -1,0 +1,46 @@
+% File: templates/kaobook/template.tex
+% Minimal kaobook-based template for Pandoc-generated LaTeX (A4)
+\documentclass[a4paper,11pt]{kaobook}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+$if(title)$
+  \title{$title$}
+$endif$
+$if(subtitle)$
+  \subtitle{$subtitle$}
+$endif$
+$if(author)$
+  \author{$for(author)$$author$$sep$ \\ $endfor$}
+$endif$
+$if(date)$
+  \date{$date$}
+$else$
+  \date{\today}
+$endif$
+
+\begin{document}
+
+$if(title)$
+  \frontmatter
+  \maketitle
+$endif$
+
+$if(abstract)$
+  \begin{abstract}
+  $abstract$
+  \end{abstract}
+$endif$
+
+\tableofcontents
+
+\mainmatter
+
+$body$
+
+\end{document}
