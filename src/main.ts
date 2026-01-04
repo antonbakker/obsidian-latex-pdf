@@ -1,4 +1,16 @@
-import { App, Plugin, PluginSettingTab, Setting, Notice, TFile } from "obsidian";
+import {
+  App,
+  Menu,
+  Plugin,
+  PluginSettingTab,
+  Setting,
+  Notice,
+  TAbstractFile,
+  TFile,
+} from "obsidian";
+import { getAvailableTemplates, getTemplateById } from "./templateRegistry";
+import { TemplatePickerModal } from "./ui/TemplatePickerModal";
+import { PrintModal } from "./ui/PrintModal";
 
 interface LatexPdfPluginSettings {
   pandocPath: string;
@@ -46,6 +58,22 @@ export default class LatexPdfPlugin extends Plugin {
       },
     });
 
+    // Add to file/note "More options" (file-menu) for markdown files.
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu: Menu, file: TAbstractFile) => {
+        if (file instanceof TFile && file.extension === "md") {
+          menu.addItem((item) => {
+            item
+              .setTitle("Export to LaTeX PDF...")
+              .setIcon("printer")
+              .onClick(() => {
+                this.exportWithTemplate(file);
+              });
+          });
+        }
+      })
+    );
+
     this.addSettingTab(new LatexPdfSettingTab(this.app, this));
   }
 
@@ -62,13 +90,42 @@ export default class LatexPdfPlugin extends Plugin {
   }
 
   private async exportWithTemplate(file: TFile) {
-    // TODO: open template picker modal, run validation, then export.
-    new Notice("Template picker and validation not implemented yet.");
+    const templates = getAvailableTemplates();
+    if (!templates.length) {
+      new Notice("No LaTeX templates are configured.");
+      return;
+    }
+
+    const modal = new TemplatePickerModal(this.app, {
+      templates,
+      initialTemplateId: this.settings.defaultTemplateId,
+      onSelect: (template) => {
+        this.openPrintModal(file, template.id);
+      },
+    });
+    modal.open();
   }
 
   private async exportWithDefaultTemplate(file: TFile) {
-    // TODO: run validation and export using default template.
-    new Notice(`Exporting '${file.name}' with default template '${this.settings.defaultTemplateId}' is not implemented yet.`);
+    const template = getTemplateById(this.settings.defaultTemplateId);
+    if (!template) {
+      new Notice(
+        `Default template '${this.settings.defaultTemplateId}' is not available. Please update the plugin settings.`,
+      );
+      return;
+    }
+    this.openPrintModal(file, template.id);
+  }
+
+  private openPrintModal(file: TFile, templateId: string) {
+    const template = getTemplateById(templateId);
+    if (!template) {
+      new Notice(`Template '${templateId}' is not available.`);
+      return;
+    }
+
+    const modal = new PrintModal(this.app, { file, template });
+    modal.open();
   }
 }
 
@@ -114,16 +171,23 @@ class LatexPdfSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Default template ID")
-      .setDesc("ID of the LaTeX/Pandoc template to use when exporting without choosing.")
-      .addText((text) =>
-        text
-          .setPlaceholder("kaobook")
-          .setValue(this.plugin.settings.defaultTemplateId)
-          .onChange(async (value) => {
-            this.plugin.settings.defaultTemplateId = value || "kaobook";
-            await this.plugin.saveSettings();
-          })
-      );
+      .setName("Default template")
+      .setDesc("Template used when exporting without choosing.")
+      .addDropdown((dropdown) => {
+        const templates = getAvailableTemplates();
+        for (const tpl of templates) {
+          dropdown.addOption(tpl.id, tpl.label);
+        }
+        const current = this.plugin.settings.defaultTemplateId;
+        if (templates.some((t) => t.id === current)) {
+          dropdown.setValue(current);
+        } else if (templates.length > 0) {
+          dropdown.setValue(templates[0].id);
+        }
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.defaultTemplateId = value;
+          await this.plugin.saveSettings();
+        });
+      });
   }
 }
