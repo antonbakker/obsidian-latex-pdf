@@ -173,12 +173,31 @@ class LatexPdfSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    contentEl.createEl("h2", { text: "Obsidian LaTeX PDF Settings" });
+    containerEl.createEl("h2", { text: "Obsidian LaTeX PDF Settings" });
 
-      // Direct pandoc settings (only relevant when using the direct backend)
+    // Export backend selection
+    new Setting(containerEl)
+      .setName("Export backend")
+      .setDesc(
+        "Choose whether to call pandoc directly or delegate to the existing Pandoc plugin.",
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("pandoc-plugin", "Use Pandoc plugin (recommended)");
+        dropdown.addOption("direct", "Direct pandoc (experimental)");
+        dropdown.setValue(this.plugin.settings.exportBackend);
+        dropdown.onChange(async (value: ExportBackend) => {
+          this.plugin.settings.exportBackend = value;
+          await this.plugin.saveSettings();
+          this.display(); // re-render to update backend-specific options
+        });
+      });
+
+    // Direct pandoc settings (only relevant when using the direct backend)
     new Setting(containerEl)
       .setName("Pandoc executable path")
-      .setDesc("Path to the pandoc executable (used for the direct backend; ignored when using the Pandoc plugin backend).")
+      .setDesc(
+        "Path to the pandoc executable (used for the direct backend; ignored when using the Pandoc plugin backend).",
+      )
       .addText((text) =>
         text
           .setPlaceholder("pandoc")
@@ -186,10 +205,9 @@ class LatexPdfSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.pandocPath = value || "pandoc";
             await this.plugin.saveSettings();
-          })
+          }),
       );
 
-    new Setting(containerEl)
     new Setting(containerEl)
       .setName("PDF engine")
       .setDesc("LaTeX engine used by pandoc to generate PDFs (direct backend only).")
@@ -204,6 +222,7 @@ class LatexPdfSettingTab extends PluginSettingTab {
         });
       });
 
+    // Default template selection
     new Setting(containerEl)
       .setName("Default template")
       .setDesc("Template used when exporting without choosing.")

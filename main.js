@@ -65,13 +65,13 @@ var TemplatePickerModal = class extends import_obsidian.Modal {
     this.selectedId = options.initialTemplateId && this.templates.some((t) => t.id === options.initialTemplateId) ? options.initialTemplateId : this.templates[0]?.id;
   }
   onOpen() {
-    const { contentEl: contentEl2 } = this;
-    contentEl2.empty();
-    contentEl2.createEl("h2", { text: "Export to LaTeX PDF" });
-    contentEl2.createEl("p", {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "Export to LaTeX PDF" });
+    contentEl.createEl("p", {
       text: "Choose a LaTeX/Pandoc template to use for exporting this note."
     });
-    new import_obsidian.Setting(contentEl2).setName("Template").setDesc("Select the LaTeX template for this export.").addDropdown((dropdown) => {
+    new import_obsidian.Setting(contentEl).setName("Template").setDesc("Select the LaTeX template for this export.").addDropdown((dropdown) => {
       for (const tpl of this.templates) {
         dropdown.addOption(tpl.id, tpl.label);
       }
@@ -82,7 +82,7 @@ var TemplatePickerModal = class extends import_obsidian.Modal {
         this.selectedId = value;
       });
     });
-    const buttonBar = contentEl2.createDiv({ cls: "latex-pdf-modal-buttons" });
+    const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
     new import_obsidian.Setting(buttonBar).addButton((btn) => {
       btn.setButtonText("Cancel").onClick(() => {
         this.close();
@@ -112,19 +112,19 @@ var PrintModal = class extends import_obsidian2.Modal {
     this.onExport = options.onExport;
   }
   onOpen() {
-    const { contentEl: contentEl2 } = this;
-    contentEl2.empty();
-    contentEl2.createEl("h2", { text: "LaTeX PDF export" });
-    contentEl2.createEl("p", {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "LaTeX PDF export" });
+    contentEl.createEl("p", {
       text: `Note: ${this.file.name}`
     });
-    contentEl2.createEl("p", {
+    contentEl.createEl("p", {
       text: `Template: ${this.template.label} (${this.template.id})`
     });
-    contentEl2.createEl("p", {
+    contentEl.createEl("p", {
       text: "Review the note and template, then click Export to generate a PDF using your local pandoc and LaTeX installation."
     });
-    const buttonBar = contentEl2.createDiv({ cls: "latex-pdf-modal-buttons" });
+    const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
     new import_obsidian2.Setting(buttonBar).addButton((btn) => {
       btn.setButtonText("Close").onClick(() => {
         this.close();
@@ -300,14 +300,27 @@ var LatexPdfSettingTab = class extends import_obsidian4.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    contentEl.createEl("h2", { text: "Obsidian LaTeX PDF Settings" });
-    new import_obsidian4.Setting(containerEl).setName("Pandoc executable path").setDesc("Path to the pandoc executable (used for the direct backend; ignored when using the Pandoc plugin backend).").addText(
+    containerEl.createEl("h2", { text: "Obsidian LaTeX PDF Settings" });
+    new import_obsidian4.Setting(containerEl).setName("Export backend").setDesc(
+      "Choose whether to call pandoc directly or delegate to the existing Pandoc plugin."
+    ).addDropdown((dropdown) => {
+      dropdown.addOption("pandoc-plugin", "Use Pandoc plugin (recommended)");
+      dropdown.addOption("direct", "Direct pandoc (experimental)");
+      dropdown.setValue(this.plugin.settings.exportBackend);
+      dropdown.onChange(async (value) => {
+        this.plugin.settings.exportBackend = value;
+        await this.plugin.saveSettings();
+        this.display();
+      });
+    });
+    new import_obsidian4.Setting(containerEl).setName("Pandoc executable path").setDesc(
+      "Path to the pandoc executable (used for the direct backend; ignored when using the Pandoc plugin backend)."
+    ).addText(
       (text) => text.setPlaceholder("pandoc").setValue(this.plugin.settings.pandocPath).onChange(async (value) => {
         this.plugin.settings.pandocPath = value || "pandoc";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian4.Setting(containerEl);
     new import_obsidian4.Setting(containerEl).setName("PDF engine").setDesc("LaTeX engine used by pandoc to generate PDFs (direct backend only).").addDropdown((dropdown) => {
       dropdown.addOption("xelatex", "XeLaTeX");
       dropdown.addOption("lualatex", "LuaLaTeX");
