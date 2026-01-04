@@ -4,21 +4,24 @@ import type { TemplateDefinition } from "../templateRegistry";
 export interface PrintModalOptions {
   file: TFile;
   template: TemplateDefinition;
+  onExport: () => void;
 }
 
 /**
  * PrintModal is the main UI entry for exporting a note via a LaTeX template.
- * For now it shows basic information and acts as the starting point where
- * validation and pandoc/LaTeX export will be wired in.
+ * It currently displays basic information and provides an Export button that
+ * triggers the pandoc/LaTeX export pipeline provided by the caller.
  */
 export class PrintModal extends Modal {
   private readonly file: TFile;
   private readonly template: TemplateDefinition;
+  private readonly onExport: () => void;
 
   constructor(app: App, options: PrintModalOptions) {
     super(app);
     this.file = options.file;
     this.template = options.template;
+    this.onExport = options.onExport;
   }
 
   onOpen(): void {
@@ -37,7 +40,7 @@ export class PrintModal extends Modal {
 
     contentEl.createEl("p", {
       text:
-        "Validation and pandoc/LaTeX export are not yet implemented. This modal is the anchor point where those steps will be executed.",
+        "Review the note and template, then click Export to generate a PDF using your local pandoc and LaTeX installation.",
     });
 
     const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
@@ -51,10 +54,9 @@ export class PrintModal extends Modal {
       .addExtraButton((btn) => {
         btn
           .setIcon("printer")
-          .setTooltip("Export (coming soon)")
+          .setTooltip("Export to LaTeX PDF")
           .onClick(() => {
-            // Placeholder action until export is wired in.
-            this.close();
+            this.onExport();
           });
       });
   }

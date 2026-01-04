@@ -11,6 +11,7 @@ import {
 import { getAvailableTemplates, getTemplateById } from "./templateRegistry";
 import { TemplatePickerModal } from "./ui/TemplatePickerModal";
 import { PrintModal } from "./ui/PrintModal";
+import { exportNoteToPdf } from "./exportRunner";
 
 interface LatexPdfPluginSettings {
   pandocPath: string;
@@ -124,7 +125,16 @@ export default class LatexPdfPlugin extends Plugin {
       return;
     }
 
-    const modal = new PrintModal(this.app, { file, template });
+    const modal = new PrintModal(this.app, {
+      file,
+      template,
+      onExport: async () => {
+        await exportNoteToPdf(this.app, file, template, {
+          pandocPath: this.settings.pandocPath,
+          pdfEngine: this.settings.pdfEngine,
+        });
+      },
+    });
     modal.open();
   }
 }

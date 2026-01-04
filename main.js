@@ -1,7 +1,9 @@
 "use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -15,6 +17,14 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/main.ts
@@ -23,7 +33,7 @@ __export(main_exports, {
   default: () => LatexPdfPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/templateRegistry.ts
 var TEMPLATES = [
@@ -99,6 +109,7 @@ var PrintModal = class extends import_obsidian2.Modal {
     super(app);
     this.file = options.file;
     this.template = options.template;
+    this.onExport = options.onExport;
   }
   onOpen() {
     const { contentEl } = this;
@@ -111,7 +122,7 @@ var PrintModal = class extends import_obsidian2.Modal {
       text: `Template: ${this.template.label} (${this.template.id})`
     });
     contentEl.createEl("p", {
-      text: "Validation and pandoc/LaTeX export are not yet implemented. This modal is the anchor point where those steps will be executed."
+      text: "Review the note and template, then click Export to generate a PDF using your local pandoc and LaTeX installation."
     });
     const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
     new import_obsidian2.Setting(buttonBar).addButton((btn) => {
@@ -119,8 +130,8 @@ var PrintModal = class extends import_obsidian2.Modal {
         this.close();
       });
     }).addExtraButton((btn) => {
-      btn.setIcon("printer").setTooltip("Export (coming soon)").onClick(() => {
-        this.close();
+      btn.setIcon("printer").setTooltip("Export to LaTeX PDF").onClick(() => {
+        this.onExport();
       });
     });
   }
@@ -129,13 +140,47 @@ var PrintModal = class extends import_obsidian2.Modal {
   }
 };
 
+// src/exportRunner.ts
+var import_obsidian3 = require("obsidian");
+var import_util = require("util");
+var import_child_process = require("child_process");
+var fs = __toESM(require("fs/promises"));
+var os = __toESM(require("os"));
+var path = __toESM(require("path"));
+var execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
+async function exportNoteToPdf(app, file, template, settings) {
+  const { pandocPath, pdfEngine } = settings;
+  const content = await app.vault.read(file);
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "obsidian-latex-pdf-"));
+  const inputPath = path.join(tempDir, "input.md");
+  const outputPath = path.join(tempDir, "output.pdf");
+  await fs.writeFile(inputPath, content, "utf8");
+  const args = [
+    inputPath,
+    "--from=markdown+tex_math_dollars+raw_tex+link_attributes",
+    "--pdf-engine",
+    pdfEngine,
+    // TODO: wire real pandoc template file per TemplateDefinition.
+    "-o",
+    outputPath
+  ];
+  try {
+    await execFileAsync(pandocPath, args, { cwd: tempDir });
+  } catch (error) {
+    console.error("Pandoc export failed", error);
+    new import_obsidian3.Notice("LaTeX PDF export failed. Check console for details.");
+    return;
+  }
+  new import_obsidian3.Notice(`LaTeX PDF exported to temporary file: ${outputPath}`);
+}
+
 // src/main.ts
 var DEFAULT_SETTINGS = {
   pandocPath: "pandoc",
   pdfEngine: "xelatex",
   defaultTemplateId: "kaobook"
 };
-var LatexPdfPlugin = class extends import_obsidian3.Plugin {
+var LatexPdfPlugin = class extends import_obsidian4.Plugin {
   async onload() {
     console.log("Loading Obsidian LaTeX PDF plugin");
     await this.loadSettings();
@@ -165,7 +210,7 @@ var LatexPdfPlugin = class extends import_obsidian3.Plugin {
     });
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
-        if (file instanceof import_obsidian3.TFile && file.extension === "md") {
+        if (file instanceof import_obsidian4.TFile && file.extension === "md") {
           menu.addItem((item) => {
             item.setTitle("Export to LaTeX PDF...").setIcon("printer").onClick(() => {
               this.exportWithTemplate(file);
@@ -188,7 +233,7 @@ var LatexPdfPlugin = class extends import_obsidian3.Plugin {
   async exportWithTemplate(file) {
     const templates = getAvailableTemplates();
     if (!templates.length) {
-      new import_obsidian3.Notice("No LaTeX templates are configured.");
+      new import_obsidian4.Notice("No LaTeX templates are configured.");
       return;
     }
     const modal = new TemplatePickerModal(this.app, {
@@ -203,7 +248,7 @@ var LatexPdfPlugin = class extends import_obsidian3.Plugin {
   async exportWithDefaultTemplate(file) {
     const template = getTemplateById(this.settings.defaultTemplateId);
     if (!template) {
-      new import_obsidian3.Notice(
+      new import_obsidian4.Notice(
         `Default template '${this.settings.defaultTemplateId}' is not available. Please update the plugin settings.`
       );
       return;
@@ -213,14 +258,23 @@ var LatexPdfPlugin = class extends import_obsidian3.Plugin {
   openPrintModal(file, templateId) {
     const template = getTemplateById(templateId);
     if (!template) {
-      new import_obsidian3.Notice(`Template '${templateId}' is not available.`);
+      new import_obsidian4.Notice(`Template '${templateId}' is not available.`);
       return;
     }
-    const modal = new PrintModal(this.app, { file, template });
+    const modal = new PrintModal(this.app, {
+      file,
+      template,
+      onExport: async () => {
+        await exportNoteToPdf(this.app, file, template, {
+          pandocPath: this.settings.pandocPath,
+          pdfEngine: this.settings.pdfEngine
+        });
+      }
+    });
     modal.open();
   }
 };
-var LatexPdfSettingTab = class extends import_obsidian3.PluginSettingTab {
+var LatexPdfSettingTab = class extends import_obsidian4.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -229,13 +283,13 @@ var LatexPdfSettingTab = class extends import_obsidian3.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Obsidian LaTeX PDF Settings" });
-    new import_obsidian3.Setting(containerEl).setName("Pandoc executable path").setDesc("Path to the pandoc executable (leave as 'pandoc' if it is on your PATH).").addText(
+    new import_obsidian4.Setting(containerEl).setName("Pandoc executable path").setDesc("Path to the pandoc executable (leave as 'pandoc' if it is on your PATH).").addText(
       (text) => text.setPlaceholder("pandoc").setValue(this.plugin.settings.pandocPath).onChange(async (value) => {
         this.plugin.settings.pandocPath = value || "pandoc";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian3.Setting(containerEl).setName("PDF engine").setDesc("LaTeX engine used by pandoc to generate PDFs.").addDropdown((dropdown) => {
+    new import_obsidian4.Setting(containerEl).setName("PDF engine").setDesc("LaTeX engine used by pandoc to generate PDFs.").addDropdown((dropdown) => {
       dropdown.addOption("xelatex", "XeLaTeX");
       dropdown.addOption("lualatex", "LuaLaTeX");
       dropdown.addOption("pdflatex", "pdfLaTeX");
@@ -245,7 +299,7 @@ var LatexPdfSettingTab = class extends import_obsidian3.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian3.Setting(containerEl).setName("Default template").setDesc("Template used when exporting without choosing.").addDropdown((dropdown) => {
+    new import_obsidian4.Setting(containerEl).setName("Default template").setDesc("Template used when exporting without choosing.").addDropdown((dropdown) => {
       const templates = getAvailableTemplates();
       for (const tpl of templates) {
         dropdown.addOption(tpl.id, tpl.label);
