@@ -14,6 +14,24 @@
 % Math and symbols
 \usepackage{amsmath,amssymb}
 
+% Tables
+\usepackage{longtable,booktabs}
+\usepackage{array} % for >{\raggedright\arraybackslash}p{...} column types used by Pandoc
+\usepackage{calc}  % for (\linewidth - 10\tabcolsep) style width arithmetic
+
+% Pandoc sometimes uses \real{...} in relative column widths; provide a simple definition.
+\providecommand{\real}[1]{#1}
+
+% Pandoc generates a \tightlist command for tight itemize/enumerate lists;
+% define it here so LaTeX compiles without error.
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+}
+
+% Dummy counter used by some Pandoc-generated table constructs
+\newcounter{none}
+
 % Graphics and hyperlinks
 \usepackage{graphicx}
 \usepackage{hyperref}

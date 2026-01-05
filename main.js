@@ -179,19 +179,31 @@ var PrintModal = class extends import_obsidian2.Modal {
 
 // src/exportRunner.ts
 var import_obsidian3 = require("obsidian");
+
+// src/pandocRunner.ts
 var import_util = require("util");
 var import_child_process = require("child_process");
 var fs = __toESM(require("fs/promises"));
 var os = __toESM(require("os"));
 var path = __toESM(require("path"));
 var execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
-async function exportNoteToPdf(app, file, template, settings) {
-  const { pandocPath, pdfEngine } = settings;
+async function preprocessNoteToTempFile(app, file) {
   const content = await app.vault.read(file);
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "obsidian-latex-pdf-"));
   const inputPath = path.join(tempDir, "input.md");
-  const outputPath = path.join(tempDir, "output.pdf");
   await fs.writeFile(inputPath, content, "utf8");
+  return { inputPath, tempDir };
+}
+async function runPandocToPdf(opts) {
+  const { app, file, template, settings } = opts;
+  const { pandocPath, pdfEngine } = settings;
+  const { inputPath, tempDir, headerTexPath } = await preprocessNoteToTempFile(app, file);
+  const notePath = file.path;
+  const noteDir = notePath.includes("/") ? notePath.substring(0, notePath.lastIndexOf("/")) : "";
+  const noteBase = file.basename;
+  const vaultBasePath = app.vault.adapter?.basePath;
+  const outputDir = vaultBasePath && noteDir ? path.join(vaultBasePath, noteDir) : vaultBasePath || tempDir;
+  const outputPath = path.join(outputDir, `${noteBase}.pdf`);
   const args = [
     inputPath,
     "--from=markdown+tex_math_dollars+raw_tex+link_attributes",
@@ -199,18 +211,32 @@ async function exportNoteToPdf(app, file, template, settings) {
     pdfEngine
   ];
   if (template.pandocTemplateRelativePath) {
-    const templatePath = path.join(__dirname, template.pandocTemplateRelativePath);
+    const pluginTemplateBase = "/Users/anton/Development/989646093931/obsidian-latex-pdf";
+    const templatePath = path.join(pluginTemplateBase, template.pandocTemplateRelativePath);
     args.push("--template", templatePath);
   }
+  if (headerTexPath) {
+    args.push("--include-in-header", headerTexPath);
+  }
   args.push("-o", outputPath);
+  await execFileAsync(pandocPath, args, { cwd: tempDir });
+  return outputPath;
+}
+
+// src/exportRunner.ts
+async function exportNoteToPdf(app, file, template, settings) {
   try {
-    await execFileAsync(pandocPath, args, { cwd: tempDir });
+    const outputPath = await runPandocToPdf({
+      app,
+      file,
+      template,
+      settings
+    });
+    new import_obsidian3.Notice(`LaTeX PDF exported: ${outputPath}`);
   } catch (error) {
     console.error("Pandoc export failed", error);
     new import_obsidian3.Notice("LaTeX PDF export failed. Check console for details.");
-    return;
   }
-  new import_obsidian3.Notice(`LaTeX PDF exported to temporary file: ${outputPath}`);
 }
 
 // src/validation/validator.ts

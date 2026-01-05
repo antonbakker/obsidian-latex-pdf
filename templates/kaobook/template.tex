@@ -9,10 +9,22 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 
+% Tables
+\usepackage{longtable,booktabs}
+
 % Optional client-specific configuration
 $if(client)$
   \IfFileExists{clients/$client$/preamble.tex}{\input{clients/$client$/preamble.tex}}{}
 $endif$
+
+% Pandoc-generated tight lists use \\tightlist. Define it to avoid errors.
+\\providecommand{\\tightlist}{%
+  \\setlength{\\itemsep}{0pt}%
+  \\setlength{\\parskip}{0pt}%
+}
+
+% Dummy counter used by some Pandoc-generated table constructs
+\\newcounter{none}
 
 $if(title)$
   \title{$title$}
