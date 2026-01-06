@@ -1,0 +1,5 @@
+Context: User updating Obsidian BRAT-managed plugin, sees error that manifest.json is missing while manifest.json exists in current folder.
+Actual question: Why does BRAT say manifest.json is missing when the file is visible in the repo?
+Unclear points: Exact BRAT configuration (GitHub repo/branch/path) and whether manifest is committed and pushed, and whether BRAT points at the repo root.
+Improvement: Check that manifest.json is at the repository root on the default branch, committed and pushed, and that BRAT is configured to the correct repo/path. Confirm plugin structure meets Obsidian plugin requirements (manifest.json, main.js, styles.css at root).
+Result: Pending – analysis in progress, no fixes applied yet.

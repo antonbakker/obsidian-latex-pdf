@@ -6,7 +6,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usepackage{microtype}
+% NOTE: microtype can conflict with Pandoc's highlighted code output when
+% accents such as \^ are used inside token macros. To keep the template
+% robust for code-heavy documents, we omit microtype here.
 
 % Page layout (A4)
 \usepackage[a4paper,margin=2.5cm]{geometry}

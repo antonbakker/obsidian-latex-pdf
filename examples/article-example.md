@@ -67,23 +67,16 @@ configuration.
 
 ## Mathematics
 
-Inline math is written as `$E = mc^2$`. Display math uses fenced blocks:
-
-```latex
-$$
-  f(x) = \int_{-\infty}^{\infty} e^{-x^2} \, dx
-$$
-```
-
-In markdown, you can simply write:
-
-```markdown
-Let $E = mc^2$ be the famous equation.
+Inline math is written as `$E = mc^2$`. Display math uses a standard LaTeX block, for example:
 
 $$
   f(x) = \int_{-\infty}^{\infty} e^{-x^2} \, dx
 $$
-```
+
+In markdown, you can simply write the following lines (shown here as inline code so they render literally):
+
+- `Let $E = mc^2$ be the famous equation.`
+- `$$  f(x) = \int_{-\infty}^{\infty} e^{-x^2} \, dx $$`
 
 The template loads `amsmath` and `amssymb`, so standard AMS environments and
 symbols are available.
