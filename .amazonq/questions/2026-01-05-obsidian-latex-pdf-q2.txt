@@ -1,0 +1,36 @@
+Question date: 2026-01-05
+Project: obsidian-latex-pdf
+
+User question:
+"could you create examples notes for each LaTeX template that we currently support with all headers, macro's in the note with a brief descriptin what the code does as an instruction document. Once we have these examples, we will create the pdf output and add that as an example how eventually the output will look like? Please be as comprehensive as possible. Please note that we will also use these notes for testing purposes and to update our code so it becomes fully supported and testing purposes when we make changes in the future.Could you also set up the testing scripts. Please raise any question to clarify or to further improve our project and it's result"
+
+Context linkage:
+- This is a follow-up to earlier work on release scripting and the project charter for the same plugin.
+- It logically extends the project by adding example notes/fixtures and a real testing setup.
+
+Clarified tasks:
+1) Create comprehensive example markdown notes for each supported template (article, report, kaobook, thesis-kaobook), including:
+   - YAML frontmatter with all relevant fields (title, author, date, abstract, client, university, acknowledgements, etc.).
+   - In-note examples of macros or constructs that interact with the LaTeX templates (e.g. client-specific preamble hooks, thesis metadata usage).
+   - Inline explanations so the notes double as instruction documents.
+2) Prepare these notes so they can also act as fixtures for automated tests.
+3) Replace the placeholder test script with a real testing setup (likely Vitest or Jest without Babel) and add initial tests.
+4) Ask clarifying questions where more input would materially improve the design (e.g. where example notes should live relative to the vault, how strict thesis validation should be, what CI or release process is envisioned).
+
+Unclear points:
+- Exact directory/location where example notes should live (inside this repo under an `examples/` directory, or in a separate Obsidian vault repo).
+- Naming conventions for example notes and whether you want one note per template or multiple variants (minimal vs advanced).
+- Preferred JS test framework (Vitest vs Jest) and whether Node-only tests are sufficient or if simulated Obsidian behaviour is needed.
+
+Planned approach:
+- Create an `examples/` folder in the plugin repo containing one markdown file per template, designed to be both human-readable docs and test fixtures.
+- Ensure each example uses the frontmatter and fields referenced by the LaTeX templates and the validation subsystem.
+- Introduce a lightweight TypeScript-friendly test runner (likely Vitest) with npm scripts wired into `package.json`.
+- Add initial unit tests for templateRegistry and validation/validator using the new example notes as fixtures.
+- Update this log after implementation with a summary of what was added and any follow-up items.
+
+Outcome tracking:
+- Created an examples/ directory with detailed instructional markdown notes for the article, report, kaobook, and thesis-kaobook templates.
+- Set up Vitest as the test runner, updated npm test scripts, and added initial unit tests for the template registry and validation engine.
+- Vitest is declared as a devDependency but not yet installed locally; running `npm install` is required before `npm test` will succeed.
+- Next potential steps: add tests that exercise the full export pipeline and generate sample PDFs from the example notes.

@@ -1,18 +1,23 @@
 {
   "name": "obsidian-latex-pdf",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Obsidian plugin to export notes to PDF via Pandoc and LaTeX templates.",
   "main": "main.js",
   "scripts": {
     "build": "esbuild src/main.ts --bundle --outfile=main.js --format=cjs --platform=node --external:obsidian --sourcemap",
     "dev": "npm run build -- --watch",
     "lint": "echo 'TODO: add eslint'",
-    "test": "echo 'TODO: add tests'"
+    "test": "vitest",
+    "test:unit": "vitest",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major"
   },
   "devDependencies": {
     "@types/node": "^22.7.4",
     "esbuild": "^0.24.0",
     "obsidian": "^1.5.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.0"
   }
 }

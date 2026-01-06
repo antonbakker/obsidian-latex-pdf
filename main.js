@@ -196,7 +196,8 @@ async function preprocessNoteToTempFile(app, file) {
 }
 async function runPandocToPdf(opts) {
   const { app, file, template, settings } = opts;
-  const { pandocPath, pdfEngine } = settings;
+  const { pandocPath, pdfEngine, pdfEngineBinary } = settings;
+  const engineCommand = pdfEngineBinary && pdfEngineBinary.trim().length > 0 ? pdfEngineBinary : pdfEngine;
   const { inputPath, tempDir, headerTexPath } = await preprocessNoteToTempFile(app, file);
   const notePath = file.path;
   const noteDir = notePath.includes("/") ? notePath.substring(0, notePath.lastIndexOf("/")) : "";
@@ -208,7 +209,8 @@ async function runPandocToPdf(opts) {
     inputPath,
     "--from=markdown+tex_math_dollars+raw_tex+link_attributes",
     "--pdf-engine",
-    pdfEngine
+    engineCommand
+    // Enable Pandoc's default syntax highlighting so code blocks are highlighted in the output.
   ];
   if (template.pandocTemplateRelativePath) {
     const pluginTemplateBase = "/Users/anton/Development/989646093931/obsidian-latex-pdf";
@@ -295,6 +297,7 @@ async function validateFileForTemplate(app, file, template) {
 var DEFAULT_SETTINGS = {
   pandocPath: "pandoc",
   pdfEngine: "xelatex",
+  pdfEngineBinary: "",
   defaultTemplateId: "kaobook",
   exportBackend: "pandoc-plugin",
   pandocCommandId: ""
@@ -403,7 +406,8 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
         } else {
           await exportNoteToPdf(this.app, file, template, {
             pandocPath: this.settings.pandocPath,
-            pdfEngine: this.settings.pdfEngine
+            pdfEngine: this.settings.pdfEngine,
+            pdfEngineBinary: this.settings.pdfEngineBinary
           });
         }
       }
@@ -450,6 +454,14 @@ var LatexPdfSettingTab = class extends import_obsidian4.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
+    new import_obsidian4.Setting(containerEl).setName("PDF engine binary (advanced)").setDesc(
+      "Optional full path to the LaTeX engine binary used by pandoc (e.g. /Library/TeX/texbin/xelatex). Leave empty to use the engine selected above."
+    ).addText(
+      (text) => text.setPlaceholder("/Library/TeX/texbin/xelatex").setValue(this.plugin.settings.pdfEngineBinary || "").onChange(async (value) => {
+        this.plugin.settings.pdfEngineBinary = value.trim();
+        await this.plugin.saveSettings();
+      })
+    );
     new import_obsidian4.Setting(containerEl).setName("Default template").setDesc("Template used when exporting without choosing.").addDropdown((dropdown) => {
       const templates = getAvailableTemplates();
       for (const tpl of templates) {

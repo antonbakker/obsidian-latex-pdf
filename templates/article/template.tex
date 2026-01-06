@@ -32,6 +32,48 @@
 % Dummy counter used by some Pandoc-generated table constructs
 \newcounter{none}
 
+% Code blocks and syntax highlighting
+% Pandoc may wrap code blocks in a Shaded/Highlighting environment and use
+% token commands like \SpecialStringTok. Define minimal, styling-agnostic
+% versions here so that exports compile even when syntax highlighting is
+% enabled.
+\newenvironment{Shaded}{\begin{quote}}{\end{quote}}
+\newenvironment{Highlighting}{\begin{Shaded}}{\end{Shaded}}
+
+% Token commands used by Pandoc's default LaTeX highlighting. We define all of
+% them as simple passthroughs so that the document compiles even if no colour
+% package is loaded.
+\newcommand{\AlertTok}[1]{#1}
+\newcommand{\AnnotationTok}[1]{#1}
+\newcommand{\AttributeTok}[1]{#1}
+\newcommand{\BaseNTok}[1]{#1}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{#1}
+\newcommand{\CommentTok}[1]{#1}
+\newcommand{\ConstantTok}[1]{#1}
+\newcommand{\ControlFlowTok}[1]{#1}
+\newcommand{\DataTypeTok}[1]{#1}
+\newcommand{\DecValTok}[1]{#1}
+\newcommand{\DocumentationTok}[1]{#1}
+\newcommand{\ErrorTok}[1]{#1}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{#1}
+\newcommand{\FunctionTok}[1]{#1}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{#1}
+\newcommand{\KeywordTok}[1]{#1}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{#1}
+\newcommand{\OtherTok}[1]{#1}
+\newcommand{\PreprocessorTok}[1]{#1}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{#1}
+\newcommand{\SpecialStringTok}[1]{#1}
+\newcommand{\StringTok}[1]{#1}
+\newcommand{\VariableTok}[1]{#1}
+\newcommand{\VerbatimStringTok}[1]{#1}
+\newcommand{\WarningTok}[1]{#1}
+
 % Graphics and hyperlinks
 \usepackage{graphicx}
 \usepackage{hyperref}

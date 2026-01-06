@@ -1,0 +1,6 @@
+Context: Refining Obsidian markdown note for meeting minutes about reducing administrative workload for sales.
+Question: Analyse the note structure and content and provide an impression and refinement guidance.
+Unclear: Exact export target style/template; whether note must follow specific house style; language should stay Dutch.
+Planned work: Analyse headings, front matter, tables and bullet structure; then propose concrete refinements for better readability and PDF export.
+Status: pending analysis outcome.
+Result: Note refined (front matter cleaned, sections normalized, table clarified, questions grouped, actions made explicit). Next: run project-specific PDF export command and observe if previous issues are resolved.

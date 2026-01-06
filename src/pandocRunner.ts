@@ -12,7 +12,18 @@ export type PdfEngine = "xelatex" | "lualatex" | "pdflatex";
 
 export interface PandocRunnerSettings {
   pandocPath: string;
+  /**
+   * Logical PDF engine selection (e.g. "xelatex", "lualatex", "pdflatex").
+   * This is primarily used for the settings UI.
+   */
   pdfEngine: PdfEngine;
+  /**
+   * Optional override for the actual binary/command passed to pandoc via
+   * --pdf-engine. When set, this value is used verbatim and can be a full
+   * filesystem path (e.g. "/Library/TeX/texbin/xelatex"). When empty, the
+   * logical pdfEngine above is used instead.
+   */
+  pdfEngineBinary?: string;
 }
 
 export interface PreprocessResult {
@@ -48,7 +59,11 @@ export async function runPandocToPdf(
   },
 ): Promise<string> {
   const { app, file, template, settings } = opts;
-  const { pandocPath, pdfEngine } = settings;
+  const { pandocPath, pdfEngine, pdfEngineBinary } = settings;
+
+  const engineCommand = pdfEngineBinary && pdfEngineBinary.trim().length > 0
+    ? pdfEngineBinary
+    : pdfEngine;
 
   const { inputPath, tempDir, headerTexPath } = await preprocessNoteToTempFile(app, file);
 
@@ -65,7 +80,8 @@ export async function runPandocToPdf(
     inputPath,
     "--from=markdown+tex_math_dollars+raw_tex+link_attributes",
     "--pdf-engine",
-    pdfEngine,
+    engineCommand,
+    // Enable Pandoc's default syntax highlighting so code blocks are highlighted in the output.
   ];
 
   if (template.pandocTemplateRelativePath) {

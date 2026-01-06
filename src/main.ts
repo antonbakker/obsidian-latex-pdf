@@ -19,6 +19,12 @@ type ExportBackend = "direct" | "pandoc-plugin";
 interface LatexPdfPluginSettings {
   pandocPath: string;
   pdfEngine: "xelatex" | "lualatex" | "pdflatex";
+  /**
+   * Optional override for the actual LaTeX engine binary/command passed to
+   * pandoc via --pdf-engine. When set, this value can be a full path such as
+   * "/Library/TeX/texbin/xelatex".
+   */
+  pdfEngineBinary: string;
   defaultTemplateId: string;
   exportBackend: ExportBackend;
   pandocCommandId: string; // command ID from the existing Pandoc plugin
@@ -27,6 +33,7 @@ interface LatexPdfPluginSettings {
 const DEFAULT_SETTINGS: LatexPdfPluginSettings = {
   pandocPath: "pandoc",
   pdfEngine: "xelatex",
+  pdfEngineBinary: "",
   defaultTemplateId: "kaobook",
   exportBackend: "pandoc-plugin",
   pandocCommandId: "",
@@ -157,6 +164,7 @@ export default class LatexPdfPlugin extends Plugin {
           await exportNoteToPdf(this.app, file, template, {
             pandocPath: this.settings.pandocPath,
             pdfEngine: this.settings.pdfEngine,
+            pdfEngineBinary: this.settings.pdfEngineBinary,
           });
         }
       },
@@ -220,11 +228,26 @@ class LatexPdfSettingTab extends PluginSettingTab {
         dropdown.addOption("lualatex", "LuaLaTeX");
         dropdown.addOption("pdflatex", "pdfLaTeX");
         dropdown.setValue(this.plugin.settings.pdfEngine);
-        dropdown.onChange(async (value: "xelatex" | "lualatex" | "pdflatex") => {
-          this.plugin.settings.pdfEngine = value;
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.pdfEngine = value as "xelatex" | "lualatex" | "pdflatex";
           await this.plugin.saveSettings();
         });
       });
+
+    new Setting(containerEl)
+      .setName("PDF engine binary (advanced)")
+      .setDesc(
+        "Optional full path to the LaTeX engine binary used by pandoc (e.g. /Library/TeX/texbin/xelatex). Leave empty to use the engine selected above.",
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder("/Library/TeX/texbin/xelatex")
+          .setValue(this.plugin.settings.pdfEngineBinary || "")
+          .onChange(async (value) => {
+            this.plugin.settings.pdfEngineBinary = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
 
     // Default template selection
     new Setting(containerEl)

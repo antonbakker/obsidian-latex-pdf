@@ -1,0 +1,35 @@
+Question date: 2026-01-05
+Project: obsidian-latex-pdf
+
+User question:
+"could you add the release concept to our commits so we automatically increment the release at each push. Could you also take minor and major release into account? When done, could you create a project charter that describes our project in detail, the functionality that is currently implemented and the things we are working on and the things that we would like to add in the near future"
+
+Context analysis:
+- Current question is the first in this session, so there is no prior conversational context to relate to.
+- The repository appears to be a Node-based project (package.json, main.js, tsconfig.json), likely an Obsidian plugin for LaTeX/PDF handling.
+
+Clarified questions:
+1) Implement an automated release/versioning mechanism that increments version on each push, taking semantic version levels (major, minor, patch) into account.
+2) Create or update a detailed project charter describing:
+   - What the project is and does.
+   - Functionality currently implemented.
+   - Functionality in progress.
+   - Functionality planned for the near future.
+
+Unclear points to watch:
+- Exact desired semantics for major vs minor vs patch bumps (e.g. based on commit messages, manual flags, or branches).
+- Whether the release should be represented via git tags, versions.json, package.json, or all of them.
+- Preferred place and structure for the project charter if any existing charter/warp.md already exists.
+
+Planned approach:
+- Inspect package.json, versions.json, and existing project structure to infer current versioning and release practices.
+- Propose and implement a git hook–based or script-based version bumping mechanism that runs on push (without auto-committing) and supports major/minor/patch.
+- Detect or define how the user will signal major vs minor vs patch (e.g. via Conventional Commit prefixes or explicit flags).
+- Discover existing documentation (e.g. warp.md, README, current project charter) and assemble a detailed project charter markdown under .amazonq/rules/project-charter.md, also syncing with warp.md if present, per rules.
+
+Outcome tracking:
+- Implemented a Node-based release helper at scripts/release.js and wired npm scripts release:patch, release:minor, and release:major.
+- Ran npm run release:patch once, which bumped the project version from 0.1.10 to 0.1.11 and synchronised package.json, manifest.json, and versions.json, followed by npm run build.
+- Updated the project charter at .amazonq/rules/project-charter.md to describe current architecture, implemented features (template registry, validation, export pipeline, settings, release tooling), work-in-progress areas, and future ideas.
+- Lint and test scripts still contain TODO placeholders; a full ESLint + test setup remains to be implemented.
+- Next steps (optional): wire release scripts into git hooks or CI if fully automated per-push releases are desired.
