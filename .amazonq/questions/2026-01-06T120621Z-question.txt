@@ -3,3 +3,8 @@ Actual question: Why does BRAT say manifest.json is missing when the file is vis
 Unclear points: Exact BRAT configuration (GitHub repo/branch/path) and whether manifest is committed and pushed, and whether BRAT points at the repo root.
 Improvement: Check that manifest.json is at the repository root on the default branch, committed and pushed, and that BRAT is configured to the correct repo/path. Confirm plugin structure meets Obsidian plugin requirements (manifest.json, main.js, styles.css at root).
 Result: Pending – analysis in progress, no fixes applied yet.
+Updated result (later in conversation):
+- Investigated git history: between v0.1.13 and current HEAD, only version numbers and release scripts changed; plugin structure (manifest.json at repo root) stayed the same.
+- New script scripts/gh-release.js now creates GitHub releases without attaching plugin assets (manifest.json/main.js/styles.css) as explicit release files.
+- Likely cause: BRAT looks for manifest.json as a dedicated release asset (e.g. at releases/download/.../manifest.json), not inside the auto-generated "Source code" zip. Older releases probably had assets uploaded manually; new automated releases do not, so BRAT reports manifest.json as missing.
+- Next steps: either upload manifest.json/main.js/styles.css (or a proper plugin zip) as release assets again, or configure BRAT to track the repo directly instead of releases.
