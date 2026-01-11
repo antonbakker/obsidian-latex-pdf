@@ -494,22 +494,27 @@ var import_fs = require("fs");
 var path2 = __toESM(require("path"));
 function validateEnvironmentForTemplate(template, settings) {
   const issues = [];
-  if (template.pandocTemplateRelativePath) {
-    const repoRoot = path2.join(__dirname, "..", "..");
-    const candidateInRepo = path2.join(repoRoot, template.pandocTemplateRelativePath);
-    const candidateInPlugin = path2.join(__dirname, template.pandocTemplateRelativePath);
-    const exists = (0, import_fs.existsSync)(candidateInRepo) || (0, import_fs.existsSync)(candidateInPlugin);
-    if (!exists) {
+  if (settings.exportBackend === "direct") {
+    if (template.pandocTemplateRelativePath) {
+      const repoRoot = path2.join(__dirname, "..", "..");
+      const candidateInRepo = path2.join(repoRoot, template.pandocTemplateRelativePath);
+      const candidateInPlugin = path2.join(
+        __dirname,
+        template.pandocTemplateRelativePath
+      );
+      const exists = (0, import_fs.existsSync)(candidateInRepo) || (0, import_fs.existsSync)(candidateInPlugin);
+      if (!exists) {
+        issues.push({
+          level: "error",
+          message: `LaTeX template file '${template.pandocTemplateRelativePath}' could not be found relative to the plugin. Check that it is packaged correctly.`
+        });
+      }
+    } else {
       issues.push({
         level: "error",
-        message: `LaTeX template file '${template.pandocTemplateRelativePath}' could not be found relative to the plugin. Check that it is packaged correctly.`
+        message: `Template '${template.id}' does not define a pandoc template path, but the direct backend is selected.`
       });
     }
-  } else if (settings.exportBackend === "direct") {
-    issues.push({
-      level: "error",
-      message: `Template '${template.id}' does not define a pandoc template path, but the direct backend is selected.`
-    });
   }
   if (settings.exportBackend === "direct") {
     if (!settings.pandocPath || settings.pandocPath.trim() === "") {
