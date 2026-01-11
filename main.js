@@ -145,14 +145,14 @@ var PrintModal = class extends import_obsidian2.Modal {
     });
     if (this.validation) {
       const box = contentEl.createDiv({ cls: "latex-pdf-validation" });
-      const { issues, isValid } = this.validation;
+      const { issues, isValid: isValid2 } = this.validation;
       box.createEl("h3", { text: "Template validation" });
       if (!issues.length) {
         box.createEl("p", { text: "No validation issues detected for this template." });
       } else {
         const errorCount = issues.filter((i) => i.level === "error").length;
         const warningCount = issues.filter((i) => i.level === "warning").length;
-        const summary = isValid ? `Validation completed with ${warningCount} warning(s).` : `Validation found ${errorCount} error(s) and ${warningCount} warning(s). Fix errors before exporting if possible.`;
+        const summary = isValid2 ? `Validation completed with ${warningCount} warning(s).` : `Validation found ${errorCount} error(s) and ${warningCount} warning(s). Fix errors before exporting if possible.`;
         box.createEl("p", { text: summary });
         const list = box.createEl("ul");
         for (const issue of issues) {
@@ -162,12 +162,23 @@ var PrintModal = class extends import_obsidian2.Modal {
       }
     }
     const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
+    const hasValidation = !!this.validation;
+    const isValid = this.validation ? this.validation.isValid : true;
     new import_obsidian2.Setting(buttonBar).addButton((btn) => {
       btn.setButtonText("Close").onClick(() => {
         this.close();
       });
     }).addExtraButton((btn) => {
-      btn.setIcon("printer").setTooltip("Export to LaTeX PDF").onClick(() => {
+      btn.setIcon("printer").setTooltip(
+        isValid ? "Export to LaTeX PDF" : "Fix validation errors before exporting to LaTeX PDF"
+      );
+      if (hasValidation && !isValid) {
+        btn.setDisabled(true);
+      }
+      btn.onClick(() => {
+        if (!isValid) {
+          return;
+        }
         this.onExport();
       });
     });
@@ -241,6 +252,187 @@ async function exportNoteToPdf(app, file, template, settings) {
   }
 }
 
+// src/validation/frontmatterSchema.ts
+var SCHEMA_BY_TEMPLATE_ID = {
+  // Article (A4) template – templates/article/template.tex
+  article: {
+    templateId: "article",
+    label: "Article (A4)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing: "Missing 'title' in frontmatter. Add a title: <string> to identify the article."
+      },
+      {
+        key: "author",
+        type: "string|string[]",
+        missingSeverity: "warning",
+        messageOnMissing: "Missing 'author' in frontmatter. It is recommended to set an author for academic or formal documents."
+      },
+      {
+        key: "date",
+        type: "date-string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'date' is not set. The template will default to today's date if omitted."
+      },
+      {
+        key: "abstract",
+        type: "markdown-string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'abstract' is not set. You can add a short summary using an 'abstract' field."
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'client' is not set. Set it only when you need a client-specific LaTeX preamble."
+      }
+    ]
+  },
+  // Report (A4) template – templates/report/template.tex
+  report: {
+    templateId: "report",
+    label: "Report (A4)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing: "Missing 'title' in frontmatter. Add a title: <string> to identify the report."
+      },
+      {
+        key: "author",
+        type: "string|string[]",
+        missingSeverity: "warning",
+        messageOnMissing: "Missing 'author' in frontmatter. It is recommended to list report authors."
+      },
+      {
+        key: "date",
+        type: "date-string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'date' is not set. The template will default to today's date if omitted."
+      },
+      {
+        key: "abstract",
+        type: "markdown-string",
+        missingSeverity: "warning",
+        messageOnMissing: "Report template: 'abstract' is not set. Add an 'abstract' field to provide a short summary."
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'client' is not set. Set it only when you need a client-specific LaTeX preamble."
+      }
+      // Fields like subtitle/keywords are documented in examples but currently
+      // not enforced by validation.
+    ]
+  },
+  // Kaobook book template – templates/kaobook/template.tex
+  kaobook: {
+    templateId: "kaobook",
+    label: "Kaobook (book layout, A4)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing: "Missing 'title' in frontmatter. Add a title: <string> to identify the book."
+      },
+      {
+        key: "subtitle",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'subtitle' is not set. You can add a 'subtitle' to appear under the main title."
+      },
+      {
+        key: "author",
+        type: "string|string[]",
+        missingSeverity: "warning",
+        messageOnMissing: "Missing 'author' in frontmatter. It is recommended to list book authors."
+      },
+      {
+        key: "date",
+        type: "date-string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'date' is not set. The template will default to today's date if omitted."
+      },
+      {
+        key: "abstract",
+        type: "markdown-string",
+        missingSeverity: "warning",
+        messageOnMissing: "Book template: 'abstract' is not set. Add an 'abstract' field to summarise the work."
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'client' is not set. Set it only when you need a client-specific LaTeX preamble."
+      }
+    ]
+  },
+  // Thesis kaobook template – templates/thesis-kaobook/template.tex
+  "thesis-kaobook": {
+    templateId: "thesis-kaobook",
+    label: "Thesis (kaobook, A4)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing: "Missing 'title' in frontmatter. A thesis must have a clear title."
+      },
+      {
+        key: "author",
+        type: "string|string[]",
+        missingSeverity: "error",
+        messageOnMissing: "Missing 'author' in frontmatter. A thesis must declare its author."
+      },
+      {
+        key: "university",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing: "Thesis template: 'university' is not set in frontmatter. Add university: <name> to identify the institution."
+      },
+      {
+        key: "subtitle",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'subtitle' is not set. You can add a 'subtitle' for additional context."
+      },
+      {
+        key: "date",
+        type: "date-string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'date' is not set. The template will default to today's date if omitted."
+      },
+      {
+        key: "abstract",
+        type: "markdown-string",
+        missingSeverity: "error",
+        messageOnMissing: "Thesis template: 'abstract' is not set. Add an 'abstract' field in frontmatter to provide a summary."
+      },
+      {
+        key: "acknowledgements",
+        type: "markdown-string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'acknowledgements' is not set. You can add acknowledgements if desired."
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing: "Optional 'client' is not set. Set it only when you need a client-specific LaTeX preamble."
+      }
+    ]
+  }
+};
+function getFrontmatterSchemaForTemplateId(templateId) {
+  return SCHEMA_BY_TEMPLATE_ID[templateId];
+}
+
 // src/validation/validator.ts
 async function validateFileForTemplate(app, file, template) {
   const cache = app.metadataCache.getFileCache(file);
@@ -254,29 +446,33 @@ async function validateFileForTemplate(app, file, template) {
     return { isValid: false, issues };
   }
   const get = (key) => frontmatter[key];
-  if (!get("title")) {
-    issues.push({
-      level: "error",
-      message: "Missing 'title' in frontmatter."
-    });
-  }
-  if (!get("author")) {
-    issues.push({
-      level: "warning",
-      message: "Missing 'author' in frontmatter. It is recommended to set an author for academic documents."
-    });
-  }
-  if (template.kind === "thesis") {
-    if (!get("university")) {
+  const schema = getFrontmatterSchemaForTemplateId(template.id);
+  if (schema) {
+    for (const field of schema.fields) {
+      const value = get(field.key);
+      const isMissing = value === void 0 || value === null || typeof value === "string" && value.trim() === "" || Array.isArray(value) && value.length === 0;
+      if (!isMissing) {
+        continue;
+      }
+      if (field.missingSeverity === "ignore") {
+        continue;
+      }
       issues.push({
-        level: "warning",
-        message: "Thesis template: 'university' is not set in frontmatter. Consider adding university: <name>."
+        level: field.missingSeverity,
+        message: field.messageOnMissing
       });
     }
-    if (!get("abstract")) {
+  } else {
+    if (!get("title")) {
+      issues.push({
+        level: "error",
+        message: "Missing 'title' in frontmatter."
+      });
+    }
+    if (!get("author")) {
       issues.push({
         level: "warning",
-        message: "Thesis template: 'abstract' is not set. Add an 'abstract' field in frontmatter or a dedicated Abstract section."
+        message: "Missing 'author' in frontmatter. It is recommended to set an author for academic documents."
       });
     }
   }
@@ -291,6 +487,45 @@ async function validateFileForTemplate(app, file, template) {
   }
   const hasError = issues.some((i) => i.level === "error");
   return { isValid: !hasError, issues };
+}
+
+// src/validation/environment.ts
+var import_fs = require("fs");
+var path2 = __toESM(require("path"));
+function validateEnvironmentForTemplate(template, settings) {
+  const issues = [];
+  if (template.pandocTemplateRelativePath) {
+    const repoRoot = path2.join(__dirname, "..", "..");
+    const candidateInRepo = path2.join(repoRoot, template.pandocTemplateRelativePath);
+    const candidateInPlugin = path2.join(__dirname, template.pandocTemplateRelativePath);
+    const exists = (0, import_fs.existsSync)(candidateInRepo) || (0, import_fs.existsSync)(candidateInPlugin);
+    if (!exists) {
+      issues.push({
+        level: "error",
+        message: `LaTeX template file '${template.pandocTemplateRelativePath}' could not be found relative to the plugin. Check that it is packaged correctly.`
+      });
+    }
+  } else if (settings.exportBackend === "direct") {
+    issues.push({
+      level: "error",
+      message: `Template '${template.id}' does not define a pandoc template path, but the direct backend is selected.`
+    });
+  }
+  if (settings.exportBackend === "direct") {
+    if (!settings.pandocPath || settings.pandocPath.trim() === "") {
+      issues.push({
+        level: "error",
+        message: "Direct backend: pandoc executable path is empty. Set a valid 'Pandoc executable path' in the Obsidian LaTeX PDF settings."
+      });
+    }
+    if (settings.pdfEngineBinary && settings.pdfEngineBinary.trim() === "") {
+      issues.push({
+        level: "warning",
+        message: "PDF engine binary is configured but empty. Either clear it or set a valid full path to the LaTeX engine."
+      });
+    }
+  }
+  return issues;
 }
 
 // src/main.ts
@@ -384,11 +619,28 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
       return;
     }
     const validation = await validateFileForTemplate(this.app, file, template);
+    const envIssues = validateEnvironmentForTemplate(template, {
+      exportBackend: this.settings.exportBackend,
+      pandocPath: this.settings.pandocPath,
+      pdfEngineBinary: this.settings.pdfEngineBinary
+    });
+    if (envIssues.length) {
+      validation.issues.push(...envIssues);
+      if (envIssues.some((i) => i.level === "error")) {
+        validation.isValid = false;
+      }
+    }
     const modal = new PrintModal(this.app, {
       file,
       template,
       validation,
       onExport: async () => {
+        if (validation && !validation.isValid) {
+          new import_obsidian4.Notice(
+            "Cannot export to LaTeX PDF: fix validation errors in the frontmatter first."
+          );
+          return;
+        }
         if (this.settings.exportBackend === "pandoc-plugin") {
           const cmdId = this.settings.pandocCommandId;
           if (!cmdId) {
