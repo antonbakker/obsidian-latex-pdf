@@ -1,0 +1,8 @@
+% templates/kaobook/clients/default/preamble.tex
+% Override kaobook's default monospace font so we don't depend on Liberation Mono.
+% Requires client: "default" in the note frontmatter.
+
+\usepackage{fontspec}
+
+% Keep Libertinus Serif/Sans/Math as configured by kaobook, but override mono.
+\setmonofont{Libertinus Mono}

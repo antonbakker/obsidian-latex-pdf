@@ -14,7 +14,10 @@ university: "Example University of Technology"
 acknowledgements: |
   I would like to thank my supervisor, colleagues, friends, and family for
   their support during the preparation of this thesis.
-client: "academic-demo"
+# Use the "default" client so the thesis kaobook template picks up the
+# templates/kaobook/clients/default/preamble.tex preamble, which overrides
+# the monospace font away from Liberation Mono.
+client: "default"
 keywords:
   - "obsidian"
   - "pandoc"

@@ -10,7 +10,10 @@ abstract: |
   the **Kaobook (book layout, A4)** template. It shows how frontmatter fields
   map to title pages, how the table of contents is generated, and how chapters
   and sections are typically organised.
-client: "demo-publisher"
+# Use the "default" client so the kaobook template picks up the
+# templates/kaobook/clients/default/preamble.tex preamble, which overrides
+# the monospace font away from Liberation Mono.
+client: "default"
 keywords:
   - "obsidian"
   - "pandoc"
