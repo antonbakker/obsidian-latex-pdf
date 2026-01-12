@@ -44,7 +44,23 @@ export async function validateFileForTemplate(
   const schema = getFrontmatterSchemaForTemplateId(template.id);
   if (schema) {
     for (const field of schema.fields) {
-      const value = get(field.key);
+      let value = get(field.key);
+
+      // For 'title', treat the note's basename as an implicit fallback. The
+      // preprocessor will inject this into frontmatter before pandoc runs,
+      // so validation should not block export solely because the explicit
+      // YAML 'title' field is missing.
+      if (
+        field.key === "title" &&
+        (value === undefined ||
+          value === null ||
+          (typeof value === "string" && value.trim() === ""))
+      ) {
+        const fallbackTitle = file.basename;
+        if (fallbackTitle && fallbackTitle.trim() !== "") {
+          value = fallbackTitle;
+        }
+      }
 
       const isMissing =
         value === undefined ||

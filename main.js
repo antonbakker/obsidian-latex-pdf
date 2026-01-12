@@ -198,11 +198,80 @@ var fs = __toESM(require("fs/promises"));
 var os = __toESM(require("os"));
 var path = __toESM(require("path"));
 var execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
+function injectNoteTitleHeadingIfMissing(content, noteTitle) {
+  let lines = content.split(/\r?\n/);
+  if (lines.length === 0) {
+    return `# ${noteTitle}`;
+  }
+  if (lines[0].trim() === "---") {
+    let fmEnd = -1;
+    let hasTitle = false;
+    for (let i = 1; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (/^title\s*:/.test(line)) {
+        hasTitle = true;
+      }
+      if (line.trim() === "---") {
+        fmEnd = i;
+        break;
+      }
+    }
+    if (fmEnd !== -1 && !hasTitle) {
+      const beforeFm = lines.slice(0, fmEnd + 1);
+      const afterFm = lines.slice(fmEnd + 1);
+      const safeTitle = noteTitle.replace(/"/g, '\\"');
+      const titleLine = `title: "${safeTitle}"`;
+      const newFrontmatter = [beforeFm[0], titleLine, ...beforeFm.slice(1)];
+      lines = [...newFrontmatter, ...afterFm];
+    }
+  }
+  let index = 0;
+  let inFrontmatter = false;
+  if (lines[0].trim() === "---") {
+    inFrontmatter = true;
+    index = 1;
+    while (index < lines.length) {
+      if (lines[index].trim() === "---") {
+        index += 1;
+        break;
+      }
+      index += 1;
+    }
+  }
+  let firstHeadingLevel = null;
+  for (let i = index; i < lines.length; i += 1) {
+    const line = lines[i];
+    const match = /^(#{1,6})\s+/.exec(line);
+    if (match) {
+      firstHeadingLevel = match[1].length;
+      break;
+    }
+  }
+  if (firstHeadingLevel === 1) {
+    return content;
+  }
+  const headingLine = `# ${noteTitle}`;
+  if (inFrontmatter) {
+    const before = lines.slice(0, index);
+    const after = lines.slice(index);
+    if (after.length > 0 && after[0].trim() === "") {
+      const newBody2 = [headingLine, ...after];
+      return [...before, ...newBody2].join("\n");
+    }
+    const newBody = [headingLine, "", ...after];
+    return [...before, ...newBody].join("\n");
+  }
+  return [headingLine, "", ...lines].join("\n");
+}
 async function preprocessNoteToTempFile(app, file) {
-  const content = await app.vault.read(file);
+  const rawContent = await app.vault.read(file);
+  const contentWithHeading = injectNoteTitleHeadingIfMissing(
+    rawContent,
+    file.basename
+  );
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "obsidian-latex-pdf-"));
   const inputPath = path.join(tempDir, "input.md");
-  await fs.writeFile(inputPath, content, "utf8");
+  await fs.writeFile(inputPath, contentWithHeading, "utf8");
   return { inputPath, tempDir };
 }
 async function runPandocToPdf(opts) {
@@ -449,7 +518,13 @@ async function validateFileForTemplate(app, file, template) {
   const schema = getFrontmatterSchemaForTemplateId(template.id);
   if (schema) {
     for (const field of schema.fields) {
-      const value = get(field.key);
+      let value = get(field.key);
+      if (field.key === "title" && (value === void 0 || value === null || typeof value === "string" && value.trim() === "")) {
+        const fallbackTitle = file.basename;
+        if (fallbackTitle && fallbackTitle.trim() !== "") {
+          value = fallbackTitle;
+        }
+      }
       const isMissing = value === void 0 || value === null || typeof value === "string" && value.trim() === "" || Array.isArray(value) && value.length === 0;
       if (!isMissing) {
         continue;
