@@ -43,9 +43,10 @@ function readJson(p) {
     // This will create the tag on GitHub if it does not yet exist, and
     // associate the release with it. It uses the current default branch's
     // HEAD on GitHub as the target.
-    execSync(`gh release create ${tag} --title "${title}"`, {
-      stdio: "inherit",
-    });
+    execSync(
+      `gh release create ${tag} manifest.json main.js styles.css --title "${title}"`,
+      { stdio: "inherit" }
+    );
   } catch (err) {
     console.error("Failed to create GitHub release via gh.");
     process.exit(1);

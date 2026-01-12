@@ -71,6 +71,9 @@ export class PrintModal extends Modal {
 
     const buttonBar = contentEl.createDiv({ cls: "latex-pdf-modal-buttons" });
 
+    const hasValidation = !!this.validation;
+    const isValid = this.validation ? this.validation.isValid : true;
+
     new Setting(buttonBar)
       .addButton((btn) => {
         btn.setButtonText("Close").onClick(() => {
@@ -80,10 +83,24 @@ export class PrintModal extends Modal {
       .addExtraButton((btn) => {
         btn
           .setIcon("printer")
-          .setTooltip("Export to LaTeX PDF")
-          .onClick(() => {
-            this.onExport();
-          });
+          .setTooltip(
+            isValid
+              ? "Export to LaTeX PDF"
+              : "Fix validation errors before exporting to LaTeX PDF",
+          );
+
+        if (hasValidation && !isValid) {
+          // When validation is present and has blocking errors, disable export
+          // to reduce the likelihood of failed LaTeX/PDF generation.
+          btn.setDisabled(true);
+        }
+
+        btn.onClick(() => {
+          if (!isValid) {
+            return;
+          }
+          this.onExport();
+        });
       });
   }
 

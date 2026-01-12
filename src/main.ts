@@ -13,6 +13,7 @@ import { TemplatePickerModal } from "./ui/TemplatePickerModal";
 import { PrintModal } from "./ui/PrintModal";
 import { exportNoteToPdf } from "./exportRunner";
 import { validateFileForTemplate } from "./validation/validator";
+import { validateEnvironmentForTemplate } from "./validation/environment";
 
 type ExportBackend = "direct" | "pandoc-plugin";
 
@@ -141,11 +142,32 @@ export default class LatexPdfPlugin extends Plugin {
 
     const validation = await validateFileForTemplate(this.app, file, template);
 
+    // Augment validation with environment-level checks (template files,
+    // backend configuration) to further reduce the chance of failed exports.
+    const envIssues = validateEnvironmentForTemplate(template, {
+      exportBackend: this.settings.exportBackend,
+      pandocPath: this.settings.pandocPath,
+      pdfEngineBinary: this.settings.pdfEngineBinary,
+    });
+    if (envIssues.length) {
+      validation.issues.push(...envIssues);
+      if (envIssues.some((i) => i.level === "error")) {
+        validation.isValid = false;
+      }
+    }
+
     const modal = new PrintModal(this.app, {
       file,
       template,
       validation,
       onExport: async () => {
+        if (validation && !validation.isValid) {
+          new Notice(
+            "Cannot export to LaTeX PDF: fix validation errors in the frontmatter first.",
+          );
+          return;
+        }
+
         if (this.settings.exportBackend === "pandoc-plugin") {
           const cmdId = this.settings.pandocCommandId;
           if (!cmdId) {

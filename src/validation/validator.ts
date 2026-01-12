@@ -1,5 +1,11 @@
+// File: src/validation/validator.ts
+// Purpose: Validate a note's frontmatter against the configured schema for the
+//          selected LaTeX/Pandoc template. The configuration for each template
+//          (required fields, types, and severities) lives in frontmatterSchema.
+
 import type { App, TFile } from "obsidian";
 import type { TemplateDefinition } from "../templateRegistry";
+import { getFrontmatterSchemaForTemplateId } from "./frontmatterSchema";
 
 export type ValidationLevel = "error" | "warning";
 
@@ -32,44 +38,51 @@ export async function validateFileForTemplate(
     return { isValid: false, issues };
   }
 
-  // Helper to read simple keys
   const get = (key: string) => frontmatter[key];
 
-  // Basic checks for all templates
-  if (!get("title")) {
-    issues.push({
-      level: "error",
-      message: "Missing 'title' in frontmatter.",
-    });
-  }
+  // Look up the schema for this template and apply configured field rules.
+  const schema = getFrontmatterSchemaForTemplateId(template.id);
+  if (schema) {
+    for (const field of schema.fields) {
+      const value = get(field.key);
 
-  if (!get("author")) {
-    issues.push({
-      level: "warning",
-      message:
-        "Missing 'author' in frontmatter. It is recommended to set an author for academic documents.",
-    });
-  }
+      const isMissing =
+        value === undefined ||
+        value === null ||
+        (typeof value === "string" && value.trim() === "") ||
+        (Array.isArray(value) && value.length === 0);
 
-  // Template-specific checks
-  if (template.kind === "thesis") {
-    if (!get("university")) {
+      if (!isMissing) {
+        continue;
+      }
+
+      if (field.missingSeverity === "ignore") {
+        continue;
+      }
+
+      issues.push({
+        level: field.missingSeverity,
+        message: field.messageOnMissing,
+      });
+    }
+  } else {
+    // Fallback behaviour when no schema is configured for a template.
+    if (!get("title")) {
+      issues.push({
+        level: "error",
+        message: "Missing 'title' in frontmatter.",
+      });
+    }
+    if (!get("author")) {
       issues.push({
         level: "warning",
         message:
-          "Thesis template: 'university' is not set in frontmatter. Consider adding university: <name>.",
-      });
-    }
-    if (!get("abstract")) {
-      issues.push({
-        level: "warning",
-        message:
-          "Thesis template: 'abstract' is not set. Add an 'abstract' field in frontmatter or a dedicated Abstract section.",
+          "Missing 'author' in frontmatter. It is recommended to set an author for academic documents.",
       });
     }
   }
 
-  // Client metadata is optional but we can flag empty values
+  // Client metadata is optional but we can flag empty values regardless of template.
   if (Object.prototype.hasOwnProperty.call(frontmatter, "client")) {
     const client = get("client");
     if (!client || (typeof client === "string" && client.trim() === "")) {

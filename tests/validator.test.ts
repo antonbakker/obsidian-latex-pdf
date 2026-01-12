@@ -50,11 +50,11 @@ describe("validation/validator", () => {
     expect(result.issues.length).toBeGreaterThanOrEqual(0);
   });
 
-  it("emits thesis-specific warnings when university/abstract are missing", async () => {
+  it("treats missing thesis university/abstract as blocking errors", async () => {
     const frontmatter = {
       title: "Thesis without university",
       author: "Student Name",
-      // Note: intentionally omitting university and abstract to trigger warnings.
+      // Note: intentionally omitting university and abstract to trigger errors.
     };
     const app = makeMockApp(frontmatter);
     const file = makeMockFile();
@@ -63,7 +63,7 @@ describe("validation/validator", () => {
 
     const result = await validateFileForTemplate(app, file, template);
 
-    expect(result.isValid).toBe(true);
+    expect(result.isValid).toBe(false);
     const messages = result.issues.map((i) => i.message).join(" ");
     expect(messages).toContain("Thesis template");
   });

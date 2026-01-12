@@ -496,17 +496,13 @@ function validateEnvironmentForTemplate(template, settings) {
   const issues = [];
   if (settings.exportBackend === "direct") {
     if (template.pandocTemplateRelativePath) {
-      const repoRoot = path2.join(__dirname, "..", "..");
-      const candidateInRepo = path2.join(repoRoot, template.pandocTemplateRelativePath);
-      const candidateInPlugin = path2.join(
-        __dirname,
-        template.pandocTemplateRelativePath
-      );
-      const exists = (0, import_fs.existsSync)(candidateInRepo) || (0, import_fs.existsSync)(candidateInPlugin);
+      const pluginTemplateBase = "/Users/anton/Development/989646093931/obsidian-latex-pdf";
+      const templatePath = path2.join(pluginTemplateBase, template.pandocTemplateRelativePath);
+      const exists = (0, import_fs.existsSync)(templatePath);
       if (!exists) {
         issues.push({
           level: "error",
-          message: `LaTeX template file '${template.pandocTemplateRelativePath}' could not be found relative to the plugin. Check that it is packaged correctly.`
+          message: `LaTeX template file '${template.pandocTemplateRelativePath}' could not be found relative to the configured template base directory. Check that it is available on disk or adjust the template base path.`
         });
       }
     } else {
