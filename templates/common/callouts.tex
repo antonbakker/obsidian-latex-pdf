@@ -1,0 +1,35 @@
+% File: templates/common/callouts.tex
+% Purpose: Provide simple LaTeX environments for Obsidian-style callouts
+% (info, warning, tip, etc.) so that the plugin can map markdown callouts
+% to consistent LaTeX boxes.
+
+\usepackage[most]{tcolorbox}
+\tcbset{colback=white, colframe=black!15, boxrule=0.5pt, sharp corners}
+
+% Info / note callout
+\newtcolorbox{callout-info}[1]{
+  title={#1},
+  colback=blue!5!white,
+  colframe=blue!60!black,
+}
+
+% Warning callout
+\newtcolorbox{callout-warning}[1]{
+  title={#1},
+  colback=yellow!10!white,
+  colframe=yellow!60!black,
+}
+
+% Tip / success callout
+\newtcolorbox{callout-tip}[1]{
+  title={#1},
+  colback=green!5!white,
+  colframe=green!60!black,
+}
+
+% Generic fallback callout
+\newtcolorbox{callout-note}[1]{
+  title={#1},
+  colback=gray!5!white,
+  colframe=gray!60!black,
+}

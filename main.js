@@ -198,6 +198,9 @@ var fs = __toESM(require("fs/promises"));
 var os = __toESM(require("os"));
 var path = __toESM(require("path"));
 var execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
+function isAbsolutePath(p) {
+  return path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p);
+}
 function injectNoteTitleHeadingIfMissing(content, noteTitle) {
   let lines = content.split(/\r?\n/);
   if (lines.length === 0) {
@@ -263,22 +266,95 @@ function injectNoteTitleHeadingIfMissing(content, noteTitle) {
   }
   return [headingLine, "", ...lines].join("\n");
 }
-async function preprocessNoteToTempFile(app, file) {
+function transformCallouts(content) {
+  const lines = content.split(/\r?\n/);
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const calloutMatch = /^>\s*\[!([A-Za-z0-9_-]+)\]\s*(.*)$/.exec(line);
+    if (!calloutMatch) {
+      out.push(line);
+      i += 1;
+      continue;
+    }
+    const rawType = calloutMatch[1].toLowerCase();
+    const titleText = calloutMatch[2].trim();
+    let env = "callout-note";
+    let defaultTitle = "Note";
+    switch (rawType) {
+      case "info":
+      case "note":
+        env = "callout-info";
+        defaultTitle = rawType === "note" ? "Note" : "Info";
+        break;
+      case "warning":
+      case "caution":
+        env = "callout-warning";
+        defaultTitle = "Warning";
+        break;
+      case "tip":
+      case "success":
+        env = "callout-tip";
+        defaultTitle = "Tip";
+        break;
+      default:
+        env = "callout-note";
+        defaultTitle = rawType.charAt(0).toUpperCase() + rawType.slice(1);
+        break;
+    }
+    const finalTitle = titleText.length > 0 ? titleText : defaultTitle;
+    out.push(`\\begin{${env}}{${finalTitle}}`);
+    i += 1;
+    while (i < lines.length) {
+      const bodyLine = lines[i];
+      if (!bodyLine.startsWith(">")) break;
+      out.push(bodyLine.replace(/^>\s?/, ""));
+      i += 1;
+    }
+    out.push(`\\end{${env}}`);
+  }
+  return out.join("\n");
+}
+async function preprocessNoteToTempFile(app, file, settings) {
   const rawContent = await app.vault.read(file);
-  const contentWithHeading = injectNoteTitleHeadingIfMissing(
-    rawContent,
-    file.basename
-  );
+  const withHeading = injectNoteTitleHeadingIfMissing(rawContent, file.basename);
+  const contentWithHeading = transformCallouts(withHeading);
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "obsidian-latex-pdf-"));
   const inputPath = path.join(tempDir, "input.md");
   await fs.writeFile(inputPath, contentWithHeading, "utf8");
-  return { inputPath, tempDir };
+  let headerTexPath;
+  if (settings.enableLatexProfiles && settings.latexProfileBaseDir) {
+    const cache = app.metadataCache.getFileCache(file);
+    const fm = cache?.frontmatter;
+    const rawProfile = fm?.["latex_pdf_profile"];
+    if (typeof rawProfile === "string" && rawProfile.trim().length > 0) {
+      const profileId = rawProfile.trim();
+      const baseDir = settings.latexProfileBaseDir;
+      const vaultBasePath = app.vault.adapter?.basePath;
+      let baseAbs;
+      if (isAbsolutePath(baseDir)) {
+        baseAbs = baseDir;
+      } else if (vaultBasePath) {
+        baseAbs = path.join(vaultBasePath, baseDir);
+      }
+      if (baseAbs) {
+        const candidate = path.join(baseAbs, profileId, "preamble.tex");
+        try {
+          await fs.access(candidate);
+          headerTexPath = candidate;
+        } catch {
+        }
+      }
+    }
+  }
+  return { inputPath, tempDir, headerTexPath };
 }
 async function runPandocToPdf(opts) {
   const { app, file, template, settings } = opts;
   const { pandocPath, pdfEngine, pdfEngineBinary } = settings;
   const engineCommand = pdfEngineBinary && pdfEngineBinary.trim().length > 0 ? pdfEngineBinary : pdfEngine;
-  const { inputPath, tempDir, headerTexPath } = await preprocessNoteToTempFile(app, file);
+  const { inputPath, tempDir, headerTexPath } = await preprocessNoteToTempFile(app, file, settings);
   const notePath = file.path;
   const noteDir = notePath.includes("/") ? notePath.substring(0, notePath.lastIndexOf("/")) : "";
   const noteBase = file.basename;
@@ -297,6 +373,8 @@ async function runPandocToPdf(opts) {
     const templatePath = path.join(pluginTemplateBase, template.pandocTemplateRelativePath);
     args.push("--template", templatePath);
   }
+  const calloutsPreamble = "/Users/anton/Development/989646093931/obsidian-latex-pdf/templates/common/callouts.tex";
+  args.push("--include-in-header", calloutsPreamble);
   if (headerTexPath) {
     args.push("--include-in-header", headerTexPath);
   }
@@ -567,7 +645,7 @@ async function validateFileForTemplate(app, file, template) {
 // src/validation/environment.ts
 var import_fs = require("fs");
 var path2 = __toESM(require("path"));
-function validateEnvironmentForTemplate(template, settings) {
+function validateEnvironmentForTemplate(app, file, template, settings) {
   const issues = [];
   if (settings.exportBackend === "direct") {
     if (template.pandocTemplateRelativePath) {
@@ -601,6 +679,31 @@ function validateEnvironmentForTemplate(template, settings) {
       });
     }
   }
+  if (settings.enableLatexProfiles && settings.latexProfileBaseDir) {
+    const cache = app.metadataCache.getFileCache(file);
+    const fm = cache?.frontmatter;
+    const rawProfile = fm?.["latex_pdf_profile"];
+    if (typeof rawProfile === "string" && rawProfile.trim().length > 0) {
+      const profileId = rawProfile.trim();
+      const baseDir = settings.latexProfileBaseDir;
+      const vaultBasePath = app.vault.adapter?.basePath;
+      let baseAbs;
+      if (path2.isAbsolute(baseDir) || /^[A-Za-z]:[\\/]/.test(baseDir)) {
+        baseAbs = baseDir;
+      } else if (vaultBasePath) {
+        baseAbs = path2.join(vaultBasePath, baseDir);
+      }
+      if (baseAbs) {
+        const candidate = path2.join(baseAbs, profileId, "preamble.tex");
+        if (!(0, import_fs.existsSync)(candidate)) {
+          issues.push({
+            level: "warning",
+            message: `LaTeX profile '${profileId}' is set in frontmatter, but no preamble.tex was found in '${baseDir}/${profileId}'. The profile will be ignored for this export.`
+          });
+        }
+      }
+    }
+  }
   return issues;
 }
 
@@ -609,9 +712,11 @@ var DEFAULT_SETTINGS = {
   pandocPath: "pandoc",
   pdfEngine: "xelatex",
   pdfEngineBinary: "",
-  defaultTemplateId: "kaobook",
+  defaultType: "kaobook",
   exportBackend: "pandoc-plugin",
-  pandocCommandId: ""
+  pandocCommandId: "",
+  enableLatexProfiles: false,
+  latexProfileBaseDir: ""
 };
 var LatexPdfPlugin = class extends import_obsidian4.Plugin {
   async onload() {
@@ -671,7 +776,7 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
     }
     const modal = new TemplatePickerModal(this.app, {
       templates,
-      initialTemplateId: this.settings.defaultTemplateId,
+      initialTemplateId: this.settings.defaultType,
       onSelect: (template) => {
         this.openPrintModal(file, template.id);
       }
@@ -679,10 +784,10 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
     modal.open();
   }
   async exportWithDefaultTemplate(file) {
-    const template = getTemplateById(this.settings.defaultTemplateId);
+    const template = getTemplateById(this.settings.defaultType);
     if (!template) {
       new import_obsidian4.Notice(
-        `Default template '${this.settings.defaultTemplateId}' is not available. Please update the plugin settings.`
+        `Default template '${this.settings.defaultType}' is not available. Please update the plugin settings.`
       );
       return;
     }
@@ -695,10 +800,12 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
       return;
     }
     const validation = await validateFileForTemplate(this.app, file, template);
-    const envIssues = validateEnvironmentForTemplate(template, {
+    const envIssues = validateEnvironmentForTemplate(this.app, file, template, {
       exportBackend: this.settings.exportBackend,
       pandocPath: this.settings.pandocPath,
-      pdfEngineBinary: this.settings.pdfEngineBinary
+      pdfEngineBinary: this.settings.pdfEngineBinary,
+      enableLatexProfiles: this.plugin.settings.enableLatexProfiles,
+      latexProfileBaseDir: this.plugin.settings.latexProfileBaseDir
     });
     if (envIssues.length) {
       validation.issues.push(...envIssues);
@@ -748,6 +855,9 @@ var LatexPdfSettingTab = class extends import_obsidian4.PluginSettingTab {
     super(app, plugin);
     this.plugin = plugin;
   }
+  get useLatexProfiles() {
+    return !!this.plugin.settings.enableLatexProfiles;
+  }
   display() {
     const { containerEl } = this;
     containerEl.empty();
@@ -769,6 +879,22 @@ var LatexPdfSettingTab = class extends import_obsidian4.PluginSettingTab {
     ).addText(
       (text) => text.setPlaceholder("pandoc").setValue(this.plugin.settings.pandocPath).onChange(async (value) => {
         this.plugin.settings.pandocPath = value || "pandoc";
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian4.Setting(containerEl).setName("LaTeX profile preambles").setDesc(
+      "When enabled, notes with a 'latex_pdf_profile' frontmatter field will include a matching preamble from the configured directory."
+    ).addToggle((toggle) => {
+      toggle.setValue(this.useLatexProfiles).onChange(async (value) => {
+        this.plugin.settings.enableLatexProfiles = value;
+        await this.plugin.saveSettings();
+      });
+    });
+    new import_obsidian4.Setting(containerEl).setName("LaTeX profile base directory").setDesc(
+      "Directory containing per-profile preambles (each in '<profile>/preamble.tex'). Can be absolute or relative to your vault root."
+    ).addText(
+      (text) => text.setPlaceholder("latex-preambles").setValue(this.plugin.settings.latexProfileBaseDir || "").onChange(async (value) => {
+        this.plugin.settings.latexProfileBaseDir = value.trim();
         await this.plugin.saveSettings();
       })
     );
@@ -795,14 +921,14 @@ var LatexPdfSettingTab = class extends import_obsidian4.PluginSettingTab {
       for (const tpl of templates) {
         dropdown.addOption(tpl.id, tpl.label);
       }
-      const current = this.plugin.settings.defaultTemplateId;
+      const current = this.plugin.settings.defaultType;
       if (templates.some((t) => t.id === current)) {
         dropdown.setValue(current);
       } else if (templates.length > 0) {
         dropdown.setValue(templates[0].id);
       }
       dropdown.onChange(async (value) => {
-        this.plugin.settings.defaultTemplateId = value;
+        this.plugin.settings.defaultType = value;
         await this.plugin.saveSettings();
       });
     });

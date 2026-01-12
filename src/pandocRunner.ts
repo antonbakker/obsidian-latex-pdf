@@ -32,6 +32,10 @@ export interface PreprocessResult {
   headerTexPath?: string;
 }
 
+function isAbsolutePath(p: string): boolean {
+  return path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p);
+}
+
 /**
  * Inject a level-1 heading using the note title when the first heading in the
  * body is not already level 1 (#).
@@ -135,26 +139,129 @@ export function injectNoteTitleHeadingIfMissing(
 }
 
 /**
+ * Transform Obsidian-style callouts of the form:
+ *
+ * > [!info] Optional title
+ * > body line 1
+ * > body line 2
+ *
+ * into LaTeX environments like:
+ *
+ * \begin{callout-info}{Optional title}
+ * body line 1
+ * body line 2
+ * \end{callout-info}
+ */
+function transformCallouts(content: string): string {
+  const lines = content.split(/\r?\n/);
+  const out: string[] = [];
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const calloutMatch = /^>\s*\[!([A-Za-z0-9_-]+)\]\s*(.*)$/.exec(line);
+    if (!calloutMatch) {
+      out.push(line);
+      i += 1;
+      continue;
+    }
+
+    const rawType = calloutMatch[1].toLowerCase();
+    const titleText = calloutMatch[2].trim();
+
+    let env = "callout-note";
+    let defaultTitle = "Note";
+
+    switch (rawType) {
+      case "info":
+      case "note":
+        env = "callout-info";
+        defaultTitle = rawType === "note" ? "Note" : "Info";
+        break;
+      case "warning":
+      case "caution":
+        env = "callout-warning";
+        defaultTitle = "Warning";
+        break;
+      case "tip":
+      case "success":
+        env = "callout-tip";
+        defaultTitle = "Tip";
+        break;
+      default:
+        env = "callout-note";
+        defaultTitle = rawType.charAt(0).toUpperCase() + rawType.slice(1);
+        break;
+    }
+
+    const finalTitle = titleText.length > 0 ? titleText : defaultTitle;
+    out.push(`\\begin{${env}}{${finalTitle}}`);
+
+    i += 1;
+    while (i < lines.length) {
+      const bodyLine = lines[i];
+      if (!bodyLine.startsWith(">")) break;
+      out.push(bodyLine.replace(/^>\s?/, ""));
+      i += 1;
+    }
+
+    out.push(`\\end{${env}}`);
+  }
+
+  return out.join("\n");
+}
+
+/**
  * Preprocessor: reads the note content, injects a top-level heading derived
  * from the note title when appropriate, and writes the result to a temporary
- * input file for pandoc.
+ * input file for pandoc. It also resolves an optional LaTeX profile preamble
+ * based on the `latex_pdf_profile` frontmatter field and the plugin settings.
  */
 export async function preprocessNoteToTempFile(
   app: App,
   file: TFile,
+  settings: PandocRunnerSettings & { enableLatexProfiles?: boolean; latexProfileBaseDir?: string },
 ): Promise<PreprocessResult> {
   const rawContent = await app.vault.read(file);
-  const contentWithHeading = injectNoteTitleHeadingIfMissing(
-    rawContent,
-    file.basename,
-  );
+  const withHeading = injectNoteTitleHeadingIfMissing(rawContent, file.basename);
+  const contentWithHeading = transformCallouts(withHeading);
 
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "obsidian-latex-pdf-"));
   const inputPath = path.join(tempDir, "input.md");
 
   await fs.writeFile(inputPath, contentWithHeading, "utf8");
 
-  return { inputPath, tempDir };
+  let headerTexPath: string | undefined;
+
+  if (settings.enableLatexProfiles && settings.latexProfileBaseDir) {
+    const cache = app.metadataCache.getFileCache(file);
+    const fm = cache?.frontmatter as Record<string, unknown> | undefined;
+    const rawProfile = fm?.["latex_pdf_profile"];
+    if (typeof rawProfile === "string" && rawProfile.trim().length > 0) {
+      const profileId = rawProfile.trim();
+      const baseDir = settings.latexProfileBaseDir;
+
+      const vaultBasePath = (app.vault as any).adapter?.basePath as string | undefined;
+      let baseAbs: string | undefined;
+      if (isAbsolutePath(baseDir)) {
+        baseAbs = baseDir;
+      } else if (vaultBasePath) {
+        baseAbs = path.join(vaultBasePath, baseDir);
+      }
+
+      if (baseAbs) {
+        const candidate = path.join(baseAbs, profileId, "preamble.tex");
+        try {
+          await fs.access(candidate);
+          headerTexPath = candidate;
+        } catch {
+          // Missing profile preamble: silently ignore for now.
+        }
+      }
+    }
+  }
+
+  return { inputPath, tempDir, headerTexPath };
 }
 
 export async function runPandocToPdf(
@@ -172,7 +279,7 @@ export async function runPandocToPdf(
     ? pdfEngineBinary
     : pdfEngine;
 
-  const { inputPath, tempDir, headerTexPath } = await preprocessNoteToTempFile(app, file);
+  const { inputPath, tempDir, headerTexPath } = await preprocessNoteToTempFile(app, file, settings as any);
 
   const notePath = file.path; // e.g. "folder/note.md"
   const noteDir = notePath.includes("/") ? notePath.substring(0, notePath.lastIndexOf("/")) : "";
@@ -200,6 +307,11 @@ export async function runPandocToPdf(
     const templatePath = path.join(pluginTemplateBase, template.pandocTemplateRelativePath);
     args.push("--template", templatePath);
   }
+
+  // Always include the common callouts preamble so that transformed
+  // callout environments compile correctly.
+  const calloutsPreamble = "/Users/anton/Development/989646093931/obsidian-latex-pdf/templates/common/callouts.tex";
+  args.push("--include-in-header", calloutsPreamble);
 
   if (headerTexPath) {
     args.push("--include-in-header", headerTexPath);

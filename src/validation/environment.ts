@@ -5,6 +5,7 @@
 
 import { existsSync } from "fs";
 import * as path from "path";
+import type { App, TFile } from "obsidian";
 import type { TemplateDefinition } from "../templateRegistry";
 
 export type EnvironmentIssueLevel = "error" | "warning";
@@ -18,6 +19,8 @@ export interface EnvironmentSettingsLike {
   exportBackend: "direct" | "pandoc-plugin";
   pandocPath: string;
   pdfEngineBinary: string;
+  enableLatexProfiles?: boolean;
+  latexProfileBaseDir?: string;
 }
 
 /**
@@ -27,6 +30,8 @@ export interface EnvironmentSettingsLike {
  * such as missing template files or empty pandoc paths in direct mode.
  */
 export function validateEnvironmentForTemplate(
+  app: App,
+  file: TFile,
   template: TemplateDefinition,
   settings: EnvironmentSettingsLike,
 ): EnvironmentIssue[] {
@@ -52,7 +57,7 @@ export function validateEnvironmentForTemplate(
       }
     } else {
       // Direct backend without a template path is likely misconfigured.
-        issues.push({
+      issues.push({
           level: "error",
           message: `Template '${template.id}' does not define a pandoc template path, but the direct backend is selected.`,
         });
@@ -77,6 +82,39 @@ export function validateEnvironmentForTemplate(
         message:
           "PDF engine binary is configured but empty. Either clear it or set a valid full path to the LaTeX engine.",
       });
+    }
+  }
+
+  // 3. Optional LaTeX profile preamble check: warn when a latex_pdf_profile is
+  // configured in frontmatter but no matching preamble.tex is found in the
+  // configured base directory.
+  if (settings.enableLatexProfiles && settings.latexProfileBaseDir) {
+    const cache = app.metadataCache.getFileCache(file);
+    const fm = cache?.frontmatter as Record<string, unknown> | undefined;
+    const rawProfile = fm?.["latex_pdf_profile"];
+
+    if (typeof rawProfile === "string" && rawProfile.trim().length > 0) {
+      const profileId = rawProfile.trim();
+      const baseDir = settings.latexProfileBaseDir;
+      const vaultBasePath = (app.vault as any).adapter?.basePath as string | undefined;
+
+      let baseAbs: string | undefined;
+      if (path.isAbsolute(baseDir) || /^[A-Za-z]:[\\/]/.test(baseDir)) {
+        baseAbs = baseDir;
+      } else if (vaultBasePath) {
+        baseAbs = path.join(vaultBasePath, baseDir);
+      }
+
+      if (baseAbs) {
+        const candidate = path.join(baseAbs, profileId, "preamble.tex");
+        if (!existsSync(candidate)) {
+          issues.push({
+            level: "warning",
+            message:
+              `LaTeX profile '${profileId}' is set in frontmatter, but no preamble.tex was found in '${baseDir}/${profileId}'. The profile will be ignored for this export.`,
+          });
+        }
+      }
     }
   }
 

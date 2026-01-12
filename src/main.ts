@@ -26,18 +26,31 @@ interface LatexPdfPluginSettings {
    * "/Library/TeX/texbin/xelatex".
    */
   pdfEngineBinary: string;
-  defaultTemplateId: string;
+  defaultType: string;
   exportBackend: ExportBackend;
   pandocCommandId: string; // command ID from the existing Pandoc plugin
+  /**
+   * When true, the plugin will look for a LaTeX preamble matching the
+   * `latex_pdf_profile` frontmatter field and include it via --include-in-header.
+   */
+  enableLatexProfiles: boolean;
+  /**
+   * Base directory (absolute or relative to the vault root) where
+   * per-profile LaTeX preambles are stored. Each profile is expected to be
+   * a subdirectory containing a `preamble.tex` file.
+   */
+  latexProfileBaseDir: string;
 }
 
 const DEFAULT_SETTINGS: LatexPdfPluginSettings = {
   pandocPath: "pandoc",
   pdfEngine: "xelatex",
   pdfEngineBinary: "",
-  defaultTemplateId: "kaobook",
+  defaultType: "kaobook",
   exportBackend: "pandoc-plugin",
   pandocCommandId: "",
+  enableLatexProfiles: false,
+  latexProfileBaseDir: "",
 };
 
 export default class LatexPdfPlugin extends Plugin {
@@ -114,7 +127,7 @@ export default class LatexPdfPlugin extends Plugin {
 
     const modal = new TemplatePickerModal(this.app, {
       templates,
-      initialTemplateId: this.settings.defaultTemplateId,
+      initialTemplateId: this.settings.defaultType,
       onSelect: (template) => {
         this.openPrintModal(file, template.id);
       },
@@ -123,10 +136,10 @@ export default class LatexPdfPlugin extends Plugin {
   }
 
   private async exportWithDefaultTemplate(file: TFile) {
-    const template = getTemplateById(this.settings.defaultTemplateId);
+    const template = getTemplateById(this.settings.defaultType);
     if (!template) {
       new Notice(
-        `Default template '${this.settings.defaultTemplateId}' is not available. Please update the plugin settings.`,
+        `Default template '${this.settings.defaultType}' is not available. Please update the plugin settings.`,
       );
       return;
     }
@@ -143,11 +156,14 @@ export default class LatexPdfPlugin extends Plugin {
     const validation = await validateFileForTemplate(this.app, file, template);
 
     // Augment validation with environment-level checks (template files,
-    // backend configuration) to further reduce the chance of failed exports.
-    const envIssues = validateEnvironmentForTemplate(template, {
+    // backend configuration, and optional LaTeX profiles) to reduce the chance
+    // of failed exports.
+    const envIssues = validateEnvironmentForTemplate(this.app, file, template, {
       exportBackend: this.settings.exportBackend,
       pandocPath: this.settings.pandocPath,
       pdfEngineBinary: this.settings.pdfEngineBinary,
+      enableLatexProfiles: this.plugin.settings.enableLatexProfiles,
+      latexProfileBaseDir: this.plugin.settings.latexProfileBaseDir,
     });
     if (envIssues.length) {
       validation.issues.push(...envIssues);
@@ -203,6 +219,10 @@ class LatexPdfSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  private get useLatexProfiles(): boolean {
+    return !!this.plugin.settings.enableLatexProfiles;
+  }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
@@ -238,6 +258,35 @@ class LatexPdfSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.pandocPath)
           .onChange(async (value) => {
             this.plugin.settings.pandocPath = value || "pandoc";
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("LaTeX profile preambles")
+      .setDesc(
+        "When enabled, notes with a 'latex_pdf_profile' frontmatter field will include a matching preamble from the configured directory.",
+      )
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.useLatexProfiles)
+          .onChange(async (value) => {
+            this.plugin.settings.enableLatexProfiles = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("LaTeX profile base directory")
+      .setDesc(
+        "Directory containing per-profile preambles (each in '<profile>/preamble.tex'). Can be absolute or relative to your vault root.",
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder("latex-preambles")
+          .setValue(this.plugin.settings.latexProfileBaseDir || "")
+          .onChange(async (value) => {
+            this.plugin.settings.latexProfileBaseDir = value.trim();
             await this.plugin.saveSettings();
           }),
       );
@@ -280,14 +329,14 @@ class LatexPdfSettingTab extends PluginSettingTab {
         for (const tpl of templates) {
           dropdown.addOption(tpl.id, tpl.label);
         }
-        const current = this.plugin.settings.defaultTemplateId;
+        const current = this.plugin.settings.defaultType;
         if (templates.some((t) => t.id === current)) {
           dropdown.setValue(current);
         } else if (templates.length > 0) {
           dropdown.setValue(templates[0].id);
         }
         dropdown.onChange(async (value) => {
-          this.plugin.settings.defaultTemplateId = value;
+          this.plugin.settings.defaultType = value;
           await this.plugin.saveSettings();
         });
       });
