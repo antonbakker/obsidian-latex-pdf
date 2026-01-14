@@ -8,6 +8,9 @@
 \usepackage[most]{tcolorbox}
 
 % Base tcolorbox settings shared by all callouts.
+% We increase before/after skip to create a bit more whitespace around each
+% callout so that the horizontal rules and icon do not visually collide with
+% surrounding paragraphs.
 \tcbset{
   enhanced,
   sharp corners,
@@ -18,8 +21,8 @@
   right=2mm,
   top=1.0ex,
   bottom=1.0ex,
-  before skip=1.25ex,
-  after skip=1.25ex,
+  before skip=1.75em,
+  after skip=1.75em,
 }
 
 % Helper: severity-specific colours
@@ -35,9 +38,21 @@
 \newcommand{\calloutIconNote}{\textcolor{\calloutNoteColor}{\bfseries N}}
 
 % Generic implementation macro: draws thin horizontal rules above and below
-% the content and supports an optional title. When a title is provided we
-% render an icon + title line above the first rule; when omitted we render
-% an icon in the left margin, vertically aligned with the first text line.
+% the content and supports an optional title.
+% - With a title (#1 non-empty):
+%   * whitespace
+%   * top thin line (via tcolorbox border)
+%   * coloured icon + bold title
+%   * thin line directly under the title
+%   * callout text
+%   * bottom thin line (via tcolorbox border)
+%   * whitespace
+% - Without a title (#1 empty):
+%   * whitespace
+%   * top thin line
+%   * coloured icon in the left margin, text inside the normal text block
+%   * bottom thin line
+%   * whitespace
 \newenvironment{callout-generic}[3][]{%
   % #1: user title (may be empty)
   % #2: colour macro (e.g. \calloutInfoColor)
@@ -50,11 +65,12 @@
   % Decide whether a title was explicitly provided.
   \def\callout@title{#1}%
   \ifx\callout@title\@empty
-    % No explicit title: icon to the left of the callout text.
-    {#3}\hspace{0.75em}\begingroup\parbox[t]{\dimexpr\linewidth-2.0em\relax}%
+    % No explicit title: icon slightly into the left margin, with text
+    % remaining inside the normal text width.
+    \hspace*{-1.2em}{#3}\hspace{0.75em}\begingroup\parbox[t]{\dimexpr\linewidth-1.95em\relax}%
   \else
-    % Title present: icon + title above the first horizontal line.
-    {\textcolor{#2}{#3\hspace{0.5em}\textbf{#1}}}\par\medskip
+    % Title present: coloured icon + bold title, then a thin rule before text.
+    {\textcolor{#2}{#3\hspace{0.5em}\textbf{#1}}}\par\vspace{0.4ex}\hrule\vspace{0.75ex}%
   \fi
 }{%
   \ifx\callout@title\@empty

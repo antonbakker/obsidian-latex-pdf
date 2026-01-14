@@ -295,30 +295,28 @@ function transformCallouts(content) {
     const rawType = calloutMatch[1].toLowerCase();
     const titleText = calloutMatch[2].trim();
     let env = "callout-note";
-    let defaultTitle = "Note";
     switch (rawType) {
       case "info":
       case "note":
         env = "callout-info";
-        defaultTitle = rawType === "note" ? "Note" : "Info";
         break;
       case "warning":
       case "caution":
         env = "callout-warning";
-        defaultTitle = "Warning";
         break;
       case "tip":
       case "success":
         env = "callout-tip";
-        defaultTitle = "Tip";
         break;
       default:
         env = "callout-note";
-        defaultTitle = rawType.charAt(0).toUpperCase() + rawType.slice(1);
         break;
     }
-    const finalTitle = titleText.length > 0 ? titleText : defaultTitle;
-    out.push(`\\begin{${env}}{${finalTitle}}`);
+    if (titleText.length > 0) {
+      out.push(`\\begin{${env}}[${titleText}]`);
+    } else {
+      out.push(`\\begin{${env}}`);
+    }
     i += 1;
     while (i < lines.length) {
       const bodyLine = lines[i];

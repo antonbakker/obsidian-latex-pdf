@@ -170,32 +170,34 @@ function transformCallouts(content: string): string {
     const titleText = calloutMatch[2].trim();
 
     let env = "callout-note";
-    let defaultTitle = "Note";
 
     switch (rawType) {
       case "info":
       case "note":
         env = "callout-info";
-        defaultTitle = rawType === "note" ? "Note" : "Info";
         break;
       case "warning":
       case "caution":
         env = "callout-warning";
-        defaultTitle = "Warning";
         break;
       case "tip":
       case "success":
         env = "callout-tip";
-        defaultTitle = "Tip";
         break;
       default:
         env = "callout-note";
-        defaultTitle = rawType.charAt(0).toUpperCase() + rawType.slice(1);
         break;
     }
 
-    const finalTitle = titleText.length > 0 ? titleText : defaultTitle;
-    out.push(`\\begin{${env}}{${finalTitle}}`);
+    // When the markdown callout has a heading (e.g. > [!info] Title), use it
+    // as the optional LaTeX environment argument so the callout layout can
+    // distinguish between titled and untitled variants. When no heading is
+    // provided, omit the title rather than synthesising a default label.
+    if (titleText.length > 0) {
+      out.push(`\\begin{${env}}[${titleText}]`);
+    } else {
+      out.push(`\\begin{${env}}`);
+    }
 
     i += 1;
     while (i < lines.length) {
