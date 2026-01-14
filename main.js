@@ -804,8 +804,8 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
       exportBackend: this.settings.exportBackend,
       pandocPath: this.settings.pandocPath,
       pdfEngineBinary: this.settings.pdfEngineBinary,
-      enableLatexProfiles: this.plugin.settings.enableLatexProfiles,
-      latexProfileBaseDir: this.plugin.settings.latexProfileBaseDir
+      enableLatexProfiles: this.settings.enableLatexProfiles,
+      latexProfileBaseDir: this.settings.latexProfileBaseDir
     });
     if (envIssues.length) {
       validation.issues.push(...envIssues);
