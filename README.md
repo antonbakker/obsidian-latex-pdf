@@ -85,6 +85,19 @@ Optional:
 - `signature` (string / multiline) – printed after the closing.
 - `client` (string) – for client-specific preambles.
 
+### Memo (A4) – `memo`
+
+Required (block export if missing):
+- `memoto` (string or multiline) – primary recipient(s).
+- `memofrom` (string or multiline) – author or department.
+- `subject` (string) – memo subject line.
+
+Optional:
+- `title` (string) – internal/metadata title.
+- `date` (string) – defaults to today when omitted.
+- `cc` (string or multiline) – additional recipients.
+- `client` (string) – for client-specific preambles.
+
 ## Environment checks
 
 The plugin also performs basic environment-level checks to reduce the chance of failed exports:

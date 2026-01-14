@@ -1,0 +1,80 @@
+% File: templates/memo/template.tex
+% Minimal A4 memo template for Pandoc-generated LaTeX.
+% Layout goals:
+% - Clear "MEMO"/subject heading
+% - Structured header (To / From / Date / CC)
+% - Clean body text with generous margins
+% - A4-focused, neutral design that can be branded via client-specific preambles
+
+\documentclass[a4paper,11pt]{scrartcl}
+
+% Encoding and fonts
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+% Page layout (A4)
+\usepackage[a4paper,margin=2.5cm]{geometry}
+
+% Basic typography
+\usepackage{setspace}
+\setstretch{1.15}
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% Tables and basic alignment helpers
+\usepackage{tabularx}
+\usepackage{array}
+
+% Ensure Pandoc-generated tight lists compile
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+}
+
+% Header includes injected by Pandoc (e.g. via --include-in-header).
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+% Optional client-specific configuration (branding, logo, colors, etc.)
+$if(client)$
+  \IfFileExists{clients/$client$/preamble.tex}{\input{clients/$client$/preamble.tex}}{}
+$endif$
+
+% Metadata: we treat the memo subject as the primary visible heading. The
+% logical "title" is still available for metadata if needed.
+$if(title)$
+  \title{$title$}
+$endif$
+
+\begin{document}
+
+% Top-left: small memo label and optional logical title
+\noindent
+{\Large\bfseries Memo}$if(title)$~-- $title$$endif$\\[1.0em]
+
+% Header block: To / From / Date / CC in a simple two-column table
+\renewcommand{\arraystretch}{1.2}% a bit more vertical space
+\noindent\begin{tabularx}{\linewidth}{>{\bfseries}p{2cm}X}
+To: & $if(memoto)$$memoto$$else$\textit{(set memoto in frontmatter)}$endif$ \\
+From: & $if(memofrom)$$memofrom$$else$\textit{(set memofrom in frontmatter)}$endif$ \\
+Date: & $if(date)$$date$$else$\today$endif$ \\
+$if(cc)$
+CC: & $cc$ \\
+$endif$
+\end{tabularx}
+
+\vspace{1.5em}
+\hrule
+\vspace{1.0em}
+
+% Subject line as a prominent heading
+$if(subject)$
+{\large\bfseries $subject$}\\[0.75em]
+$endif$
+
+$body$
+
+\end{document}

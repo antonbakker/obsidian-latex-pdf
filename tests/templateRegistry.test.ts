@@ -13,6 +13,7 @@ describe("templateRegistry", () => {
       "article",
       "kaobook",
       "letter",
+      "memo",
       "report",
       "thesis-kaobook",
     ]);

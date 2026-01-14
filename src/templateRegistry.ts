@@ -1,4 +1,4 @@
-export type TemplateKind = "article" | "report" | "book" | "thesis" | "letter";
+export type TemplateKind = "article" | "report" | "book" | "thesis" | "letter" | "memo";
 
 export interface TemplateDefinition {
   id: string;
@@ -52,6 +52,14 @@ const TEMPLATES: TemplateDefinition[] = [
       "Business letter template based on KOMA-Script scrlttr2, suitable for A4 correspondence.",
     kind: "letter",
     pandocTemplateRelativePath: "templates/letter/template.tex",
+  },
+  {
+    id: "memo",
+    label: "Memo (A4)",
+    description:
+      "Minimal A4 memo template with clear header (to/from/date/subject) suitable for internal notes.",
+    kind: "article",
+    pandocTemplateRelativePath: "templates/memo/template.tex",
   },
 ];
 

@@ -355,6 +355,63 @@ const SCHEMA_BY_TEMPLATE_ID: Record<string, TemplateFrontmatterSchema> = {
       },
     ],
   },
+
+  // Memo (A4) template – templates/memo/template.tex
+  memo: {
+    templateId: "memo",
+    label: "Memo (A4)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Optional 'title' is not set. You can add a title used for metadata or internal tracking.",
+      },
+      {
+        key: "memoto",
+        type: "string|markdown-string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Missing 'memoto' in frontmatter. Set memoto: <recipient(s)> for the memo header.",
+      },
+      {
+        key: "memofrom",
+        type: "string|markdown-string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Missing 'memofrom' in frontmatter. Set memofrom: <author or department> for the memo header.",
+      },
+      {
+        key: "subject",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Missing 'subject' in frontmatter. Add a subject to describe the memo.",
+      },
+      {
+        key: "date",
+        type: "date-string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'date' is not set. The template will default to today's date if omitted.",
+      },
+      {
+        key: "cc",
+        type: "string|markdown-string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'cc' is not set. You can list additional recipients if desired.",
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'client' is not set. Set it only when you need a client-specific LaTeX preamble.",
+      },
+    ],
+  },
 };
 
 /**
