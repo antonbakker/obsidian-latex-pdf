@@ -11,6 +11,21 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 
+% Tables and column helpers used by Pandoc's LaTeX output
+\usepackage{longtable,booktabs}
+\usepackage{array} % for >{\raggedright\arraybackslash}p{...} column types
+\usepackage{calc}  % for (\linewidth - 10\tabcolsep) width arithmetic
+
+% Provide simple definitions for helper commands that Pandoc may emit.
+\providecommand{\real}[1]{#1}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+}
+
+% Dummy counter used by some Pandoc-generated table constructs
+\newcounter{none}
+
 % Code blocks and syntax highlighting
 % Ensure Pandoc's Shaded/Highlighting environments and token commands are
 % available.
