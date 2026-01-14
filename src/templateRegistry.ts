@@ -1,4 +1,4 @@
-export type TemplateKind = "article" | "report" | "book" | "thesis";
+export type TemplateKind = "article" | "report" | "book" | "thesis" | "letter";
 
 export interface TemplateDefinition {
   id: string;
@@ -44,6 +44,14 @@ const TEMPLATES: TemplateDefinition[] = [
       "Thesis/dissertation template built on kaobook, with abstract and acknowledgements front matter.",
     kind: "thesis",
     pandocTemplateRelativePath: "templates/thesis-kaobook/template.tex",
+  },
+  {
+    id: "letter",
+    label: "Letter (A4, scrlttr2)",
+    description:
+      "Business letter template based on KOMA-Script scrlttr2, suitable for A4 correspondence.",
+    kind: "letter",
+    pandocTemplateRelativePath: "templates/letter/template.tex",
   },
 ];
 

@@ -1,0 +1,108 @@
+% File: templates/letter/template.tex
+% A4 business letter template for Pandoc-generated LaTeX, based on KOMA-Script
+% scrlttr2. This template is designed to be driven from Obsidian frontmatter
+% fields and to work well with the plugin's validation rules.
+
+\documentclass[paper=a4,fontsize=11pt]{scrlttr2}
+
+% Encoding and fonts
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+% Geometry and typography
+\KOMAoptions{
+  fromrule=aftername,         % rule under sender block
+  backaddress=true,           % print back address in window envelopes
+  parskip=half,               % a bit of space between paragraphs
+}
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% Pandoc sometimes emits a \tightlist macro for compact lists; provide a
+% minimal definition so letters compile without additional configuration.
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+}
+
+% Header includes injected by Pandoc (e.g. via --include-in-header).
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+% Optional client-specific configuration (for branding, logos, etc.).
+$if(client)$
+  \IfFileExists{clients/$client$/preamble.tex}{\input{clients/$client$/preamble.tex}}{}
+$endif$
+
+% ---- Sender / recipient metadata from frontmatter -------------------------
+
+% Sender name and address
+$if(fromname)$
+  \setkomavar{fromname}{$fromname$}
+$endif$
+
+$if(fromaddress)$
+  \setkomavar{fromaddress}{$fromaddress$}
+$endif$
+
+% Place and date on the date line
+$if(place)$
+  \setkomavar{place}{$place$}
+$endif$
+
+$if(date)$
+  \setkomavar{date}{$date$}
+$else$
+  \setkomavar{date}{\today}
+$endif$
+
+% Subject line (optional but recommended)
+$if(subject)$
+  \setkomavar{subject}{$subject$}
+$endif$
+
+% Additional reference fields are available if needed in future:
+%   yourref, myref, customer, invoice, etc.
+
+% ---- Document body --------------------------------------------------------
+
+\begin{document}
+
+% Recipient address is supplied as a LaTeX argument to the letter environment.
+\begin{letter}{%
+$if(toname)$
+$toname$\\
+$endif$
+$if(toaddress)$
+$toaddress$
+$endif$
+}
+
+% Opening (greeting). If not provided, fall back to a generic greeting.
+$if(opening)$
+  \opening{$opening$}
+$else$
+  \opening{Dear Sir or Madam,}
+$endif$
+
+$body$
+
+% Closing formula. If not provided, use a simple default.
+$if(closing)$
+  \closing{$closing$}
+$else$
+  \closing{Kind regards,}
+$endif$
+
+% Optional signature block (printed after the closing).
+$if(signature)$
+  \par\medskip
+  $signature$
+$endif$
+
+\end{letter}
+
+\end{document}

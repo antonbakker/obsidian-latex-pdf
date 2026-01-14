@@ -12,6 +12,7 @@ describe("templateRegistry", () => {
     expect(ids).toEqual([
       "article",
       "kaobook",
+      "letter",
       "report",
       "thesis-kaobook",
     ]);

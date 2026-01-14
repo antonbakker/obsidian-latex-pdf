@@ -263,6 +263,98 @@ const SCHEMA_BY_TEMPLATE_ID: Record<string, TemplateFrontmatterSchema> = {
       },
     ],
   },
+
+  // Letter (A4, scrlttr2) template – templates/letter/template.tex
+  letter: {
+    templateId: "letter",
+    label: "Letter (A4, scrlttr2)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Optional 'title' is not set. You can add a title used for metadata or internal tracking.",
+      },
+      {
+        key: "fromname",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Missing 'fromname' in frontmatter. Set fromname: <sender name> for the letter heading.",
+      },
+      {
+        key: "fromaddress",
+        type: "string|markdown-string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Letter template: 'fromaddress' is not set. Add your address for a complete letterhead.",
+      },
+      {
+        key: "toname",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Missing 'toname' in frontmatter. Set toname: <recipient name> for the address block.",
+      },
+      {
+        key: "toaddress",
+        type: "string|markdown-string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Missing 'toaddress' in frontmatter. Add the recipient's postal address.",
+      },
+      {
+        key: "subject",
+        type: "string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Letter template: 'subject' is not set. Adding a subject line is recommended for clarity.",
+      },
+      {
+        key: "place",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'place' is not set. Set place: <city> if you want it in the date line.",
+      },
+      {
+        key: "date",
+        type: "date-string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'date' is not set. The template will default to today's date if omitted.",
+      },
+      {
+        key: "opening",
+        type: "string|markdown-string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Letter template: 'opening' is not set. Add a greeting such as 'Dear ...', or it will default to a generic opening.",
+      },
+      {
+        key: "closing",
+        type: "string|markdown-string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Letter template: 'closing' is not set. Add a closing such as 'Kind regards', or it will default to a generic closing.",
+      },
+      {
+        key: "signature",
+        type: "string|markdown-string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'signature' is not set. You can add a name and title for the signature block.",
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'client' is not set. Set it only when you need a client-specific LaTeX preamble.",
+      },
+    ],
+  },
 };
 
 /**

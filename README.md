@@ -65,6 +65,26 @@ Optional:
 - `acknowledgements` (markdown string).
 - `client` (string).
 
+### Letter (A4, scrlttr2) – `letter`
+
+Required / recommended:
+- `fromname` (string) – **error** if missing; sender name in the letterhead.
+- `toname` (string) – **error** if missing; recipient name.
+- `toaddress` (string / multiline) – **error** if missing; recipient postal address.
+
+Optional but recommended:
+- `subject` (string) – subject line of the letter.
+- `opening` (string) – greeting (e.g. "Dear ...").
+- `closing` (string) – closing formula (e.g. "Kind regards").
+
+Optional:
+- `title` (string) – internal/metadata title.
+- `fromaddress` (string / multiline) – sender address.
+- `place` (string) – city for the date line.
+- `date` (string) – defaults to today when omitted.
+- `signature` (string / multiline) – printed after the closing.
+- `client` (string) – for client-specific preambles.
+
 ## Environment checks
 
 The plugin also performs basic environment-level checks to reduce the chance of failed exports:
