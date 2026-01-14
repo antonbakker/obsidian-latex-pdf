@@ -80,6 +80,11 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 
+% Header includes injected by Pandoc (e.g. via --include-in-header).
+$for(header-includes)$
+$header-includes$
+$endfor$
+
 % Optional client-specific configuration
 $if(client)$
   % If a client-specific preamble exists, include it.

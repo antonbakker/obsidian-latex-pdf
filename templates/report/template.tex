@@ -62,6 +62,11 @@
 \newcommand{\VerbatimStringTok}[1]{#1}
 \newcommand{\WarningTok}[1]{#1}
 
+% Header includes injected by Pandoc (e.g. via --include-in-header).
+$for(header-includes)$
+$header-includes$
+$endfor$
+
 % Optional client-specific configuration
 $if(client)$
   \IfFileExists{clients/$client$/preamble.tex}{\input{clients/$client$/preamble.tex}}{}

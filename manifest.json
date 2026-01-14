@@ -1,7 +1,7 @@
 {
   "id": "obsidian-latex-pdf",
   "name": "Obsidian LaTeX PDF",
-  "version": "0.1.28",
+  "version": "0.1.29",
   "minAppVersion": "1.5.0",
   "description": "Export notes to PDF using Pandoc and LaTeX templates (e.g. kaobook) with template-specific validation.",
   "author": "Anton Bakker",
