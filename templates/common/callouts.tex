@@ -32,74 +32,76 @@
 \newcommand{\calloutNoteColor}{gray!60!black}
 
 % Helper: simple text icons (kept package-light; colours vary by severity)
-\newcommand{\calloutIconInfo}{\textcolor{\calloutInfoColor}{\bfseries I}}
-\newcommand{\calloutIconWarning}{\textcolor{\calloutWarningColor}{\bfseries !}}
-\newcommand{\calloutIconTip}{\textcolor{\calloutTipColor}{\bfseries \checkmark}}
-\newcommand{\calloutIconNote}{\textcolor{\calloutNoteColor}{\bfseries N}}
+% Icons and all header text are rendered without bold; colour encodes severity.
+\newcommand{\calloutIconInfo}{\textcolor{\calloutInfoColor}{I}}
+\newcommand{\calloutIconWarning}{\textcolor{\calloutWarningColor}{!}}
+\newcommand{\calloutIconTip}{\textcolor{\calloutTipColor}{\checkmark}}
+\newcommand{\calloutIconNote}{\textcolor{\calloutNoteColor}{N}}
 
 % Generic implementation macro: draws thin horizontal rules above and below
-% the content and supports an optional title.
-% - With a title (#1 non-empty):
-%   ------------------------------
-%   <icon> <bold title>
-%   ------------------------------
-%   body text (lists, equations, quotes, ...)
-%   ------------------------------
-% - Without a title (#1 empty):
-%   ------------------------------
-%   <icon> body text (first line)
-%   body text continues...
-%   ------------------------------
-\newenvironment{callout-generic}[3][]{%
-  % #1: user title (may be empty)
-  % #2: colour macro (e.g. \calloutInfoColor)
-  % #3: icon macro (e.g. \calloutIconInfo)
+% the content and supports an optional description.
+% Mapping from markdown to layout:
+% - Situation 1: `> [!type] text`\
+%   -> icon + type label on the first line, then text body, coloured by severity.
+% - Situation 2: `> [!type]` / next lines = text\
+%   -> same as situation 1 (icon + type label, then text body).
+% - Situation 3: `> [!type] description` / next lines = text\
+%   -> icon + free-form description on the first line, then text body.
+%
+% In all cases:
+% - The colour of the icon, header/label, and horizontal lines is determined by
+%   the callout severity.
+% - No bold text is used; emphasis is purely via colour and layout.
+\newenvironment{callout-generic}[4][]{%
+  % #1: optional user description (may be empty).
+  % #2: colour macro (e.g. \calloutInfoColor).
+  % #3: icon macro (e.g. \calloutIconInfo).
+  % #4: default label text for the severity (e.g. "Info").
   \begin{tcolorbox}[
     borderline north={0.4pt}{0pt}{#2},
     borderline south={0.4pt}{0pt}{#2},
     breakable,
   ]%
-  % Decide whether a title was explicitly provided.
+  % Decide whether a description was explicitly provided.
   \def\callout@title{#1}%
   \ifx\callout@title\@empty
-    % No explicit title: print the coloured icon, then let the body content
-    % follow in normal paragraph flow inside the box.
-    {#3}\hspace{0.75em}%
+    % No explicit description: show icon + default severity label.
+    {#3}\hspace{0.75em}{\textcolor{#2}{#4}}\par\vspace{0.75ex}%
   \else
-    % Title present: coloured icon + bold title, then a thin rule before text.
-    {#3}\hspace{0.5em}{\textcolor{#2}{\textbf{#1}}}\par\vspace{0.4ex}\hrule\vspace{0.75ex}%
+    % Description present: show icon + description (no bold), coloured by severity.
+    {#3}\hspace{0.75em}{\textcolor{#2}{#1}}\par\vspace{0.75ex}%
   \fi
 }{%
   \end{tcolorbox}%
 }
 
 % Public environments used by the plugin. They are thin wrappers around the
-% generic implementation with severity-specific colours and icons.
+% generic implementation with severity-specific colours, icons, and labels.
 
 % Info / note callout
 \newenvironment{callout-info}[1][]{%
-  \begin{callout-generic}[#1]{\calloutInfoColor}{\calloutIconInfo}%
+  \begin{callout-generic}[#1]{\calloutInfoColor}{\calloutIconInfo}{Info}%
 }{%
   \end{callout-generic}%
 }
 
 % Warning callout
 \newenvironment{callout-warning}[1][]{%
-  \begin{callout-generic}[#1]{\calloutWarningColor}{\calloutIconWarning}%
+  \begin{callout-generic}[#1]{\calloutWarningColor}{\calloutIconWarning}{Warning}%
 }{%
   \end{callout-generic}%
 }
 
 % Tip / success callout
 \newenvironment{callout-tip}[1][]{%
-  \begin{callout-generic}[#1]{\calloutTipColor}{\calloutIconTip}%
+  \begin{callout-generic}[#1]{\calloutTipColor}{\calloutIconTip}{Tip}%
 }{%
   \end{callout-generic}%
 }
 
 % Generic fallback callout
 \newenvironment{callout-note}[1][]{%
-  \begin{callout-generic}[#1]{\calloutNoteColor}{\calloutIconNote}%
+  \begin{callout-generic}[#1]{\calloutNoteColor}{\calloutIconNote}{Note}%
 }{%
   \end{callout-generic}%
 }
