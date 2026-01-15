@@ -1,0 +1,128 @@
+% File: templates/koma-proposal/template.tex
+% General proposal template based on KOMA-Script scrartcl.
+% Layout goals:
+% - Compact A4 proposal with a structured header (client, project, proposal ID).
+% - Clear subject line and body text.
+% - Reuses the same robustness helpers as other templates in this plugin.
+
+\documentclass[a4paper,11pt]{scrartcl}
+
+% Encoding and fonts
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% Page layout
+\usepackage[a4paper,margin=2.5cm]{geometry}
+
+% Basic typography
+\usepackage{setspace}
+\setstretch{1.1}
+
+% Tables and alignment helpers for the header block
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{calc}
+
+% Graphics and hyperlinks
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% Provide simple definitions for helper commands that Pandoc may emit.
+\providecommand{\real}[1]{#1}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+}
+
+% Dummy counter used by some Pandoc-generated table constructs
+\newcounter{none}
+
+% Code blocks and syntax highlighting
+\newenvironment{Shaded}{\begin{quote}}{\end{quote}}
+\newenvironment{Highlighting}{\begin{Shaded}}{\end{Shaded}}
+\newcommand{\AlertTok}[1]{#1}
+\newcommand{\AnnotationTok}[1]{#1}
+\newcommand{\AttributeTok}[1]{#1}
+\newcommand{\BaseNTok}[1]{#1}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{#1}
+\newcommand{\CommentTok}[1]{#1}
+\newcommand{\ConstantTok}[1]{#1}
+\newcommand{\ControlFlowTok}[1]{#1}
+\newcommand{\DataTypeTok}[1]{#1}
+\newcommand{\DecValTok}[1]{#1}
+\newcommand{\DocumentationTok}[1]{#1}
+\newcommand{\ErrorTok}[1]{#1}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{#1}
+\newcommand{\FunctionTok}[1]{#1}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{#1}
+\newcommand{\KeywordTok}[1]{#1}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{#1}
+\newcommand{\OtherTok}[1]{#1}
+\newcommand{\PreprocessorTok}[1]{#1}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{#1}
+\newcommand{\SpecialStringTok}[1]{#1}
+\newcommand{\StringTok}[1]{#1}
+\newcommand{\VariableTok}[1]{#1}
+\newcommand{\VerbatimStringTok}[1]{#1}
+\newcommand{\WarningTok}[1]{#1}
+
+% Header includes injected by Pandoc (e.g. via --include-in-header).
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+% Optional client-specific configuration (branding, logos, etc.).
+$if(client)$
+  \IfFileExists{clients/$client$/preamble.tex}{\input{clients/$client$/preamble.tex}}{}
+$endif$
+
+% Logical metadata. We treat the proposal title as the primary display title.
+$if(title)$
+  \title{$title$}
+$endif$
+
+$if(author)$
+  \author{$for(author)$$author$$sep$ \\ $endfor$}
+$endif$
+
+$if(date)$
+  \date{$date$}
+$else$
+  \date{\today}
+$endif$
+
+\begin{document}
+
+% Header block summarising key proposal metadata.
+\noindent
+\renewcommand{\arraystretch}{1.2}% a bit more vertical space
+\begin{tabularx}{\linewidth}{>{\bfseries}p{3cm}X}
+Client: & $if(client)$$client$$else$\textit{(set client in frontmatter)}$endif$ \\
+Project: & $if(project)$$project$$else$\textit{(set project in frontmatter)}$endif$ \\
+Proposal ID: & $if(proposal_id)$$proposal_id$$else$\textit{(optional proposal_id)}$endif$ \\
+Date: & $if(date)$$date$$else$\today$endif$ \\
+\end{tabularx}
+
+\vspace{1.5em}
+\hrule
+\vspace{1.0em}
+
+% Subject / title
+$if(title)$
+  {\Large\bfseries $title$}\\[0.75em]
+$endif$
+
+$if(subtitle)$
+  {\large $subtitle$}\\[0.75em]
+$endif$
+
+$body$
+
+\end{document}

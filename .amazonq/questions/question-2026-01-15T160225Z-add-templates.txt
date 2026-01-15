@@ -1,0 +1,28 @@
+Question context:
+- Project: obsidian-latex-pdf plugin
+- Task: add three new LaTeX document templates to the plugin and create a new release.
+
+Question analysis:
+- Context: User is working on an Obsidian plugin that generates LaTeX/PDF documents.
+- Actual question: Implement and wire up the following templates in the plugin: IEEE Proposal Template, Business Plan Template, KOMA-Script Proposal Template; then perform whatever release process the project uses to publish a new version.
+- Relation to previous questions: This appears to be a new, standalone request with no prior context in this session.
+- Unclear aspects / assumptions:
+  - Where templates live in the repo (e.g. templates directory or config file).
+  - Exact structure and required frontmatter/metadata for templates in this plugin.
+  - Exact release workflow (npm package, GitHub release, Obsidian community plugin, etc.).
+- Plan to improve results:
+  - Inspect repository structure and existing templates.
+  - Mirror existing patterns for new templates (naming, metadata, commands/UI integration, tests).
+  - Follow existing release tooling (scripts/CI) to create a new version.
+
+Status:
+- Analysis complete; implementation of templates and release not started yet.
+- This file will be updated with outcomes once the work is completed.
+
+Outcomes (2026-01-15):
+- Added three new LaTeX templates under templates/: ieee-proposal, business-plan, and koma-proposal, each with robust Pandoc helpers (tightlist, Shaded, token commands) and optional client-specific preambles.
+- Registered the new templates in src/templateRegistry.ts so they appear in the template picker and can be selected as default templates.
+- Extended src/validation/frontmatterSchema.ts with dedicated schemas for ieee-proposal, business-plan, and koma-proposal, defining required and recommended frontmatter fields (e.g. title/author for IEEE, company/executive_summary for business plans, client/project for proposals).
+- Updated tests in tests/templateRegistry.test.ts and tests/validator.test.ts to cover the new templates and their validation rules.
+- Ran npm run lint, npm test, and npm run build successfully.
+- Bumped the plugin version from 0.1.33 to 0.1.34 via npm run release:patch, updating package.json, manifest.json, and versions.json for the new release.

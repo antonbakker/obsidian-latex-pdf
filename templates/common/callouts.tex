@@ -40,19 +40,16 @@
 % Generic implementation macro: draws thin horizontal rules above and below
 % the content and supports an optional title.
 % - With a title (#1 non-empty):
-%   * whitespace
-%   * top thin line (via tcolorbox border)
-%   * coloured icon + bold title
-%   * thin line directly under the title
-%   * callout text
-%   * bottom thin line (via tcolorbox border)
-%   * whitespace
+%   ------------------------------
+%   <icon> <bold title>
+%   ------------------------------
+%   body text (lists, equations, quotes, ...)
+%   ------------------------------
 % - Without a title (#1 empty):
-%   * whitespace
-%   * top thin line
-%   * coloured icon in the left margin, text inside the normal text block
-%   * bottom thin line
-%   * whitespace
+%   ------------------------------
+%   <icon> body text (first line)
+%   body text continues...
+%   ------------------------------
 \newenvironment{callout-generic}[3][]{%
   % #1: user title (may be empty)
   % #2: colour macro (e.g. \calloutInfoColor)
@@ -65,17 +62,14 @@
   % Decide whether a title was explicitly provided.
   \def\callout@title{#1}%
   \ifx\callout@title\@empty
-    % No explicit title: icon slightly into the left margin, with text
-    % remaining inside the normal text width.
-    \hspace*{-1.2em}{#3}\hspace{0.75em}\begingroup\parbox[t]{\dimexpr\linewidth-1.95em\relax}%
+    % No explicit title: print the coloured icon, then let the body content
+    % follow in normal paragraph flow inside the box.
+    {#3}\hspace{0.75em}%
   \else
     % Title present: coloured icon + bold title, then a thin rule before text.
-    {\textcolor{#2}{#3\hspace{0.5em}\textbf{#1}}}\par\vspace{0.4ex}\hrule\vspace{0.75ex}%
+    {#3}\hspace{0.5em}{\textcolor{#2}{\textbf{#1}}}\par\vspace{0.4ex}\hrule\vspace{0.75ex}%
   \fi
 }{%
-  \ifx\callout@title\@empty
-    \endgroup
-  \fi
   \end{tcolorbox}%
 }
 

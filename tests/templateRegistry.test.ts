@@ -11,7 +11,10 @@ describe("templateRegistry", () => {
 
     expect(ids).toEqual([
       "article",
+      "business-plan",
+      "ieee-proposal",
       "kaobook",
+      "koma-proposal",
       "letter",
       "memo",
       "report",

@@ -15,7 +15,7 @@ This project provides an Obsidian desktop-only plugin that exports markdown note
 ## Architecture (Current)
 
 - Obsidian plugin written in TypeScript, compiled to a single CommonJS entrypoint (main.js) via esbuild.
-- Template registry describing available templates (article, report, kaobook book, thesis) and their Pandoc template paths.
+- Template registry describing available templates (article, report, kaobook book, thesis, letter, memo, IEEE proposal, business plan, KOMA-Script proposal) and their Pandoc template paths.
 - Validation subsystem operating on Obsidian metadata (frontmatter, optional client metadata) with template-specific rules for thesis documents.
 - Export subsystem invoking Pandoc via a dedicated runner (pandocRunner) that prepares a temporary markdown file and resolves the LaTeX template path.
 - UI layer composed of:
@@ -34,8 +34,8 @@ This project provides an Obsidian desktop-only plugin that exports markdown note
   - Adds an "Export to LaTeX PDF…" item to the file menu for markdown notes.
 
 - Template management:
-  - Template registry with four built-in templates: article, report, kaobook book, and thesis (kaobook based).
-  - Each template defines a human-readable label, description, kind (article/report/book/thesis), and a relative path to the LaTeX template used by Pandoc.
+-  - Template registry with multiple built-in templates: article, report, kaobook book, thesis (kaobook based), letter, memo, IEEE proposal, business plan, and a general KOMA-Script proposal.
+-  - Each template defines a human-readable label, description, kind (article/report/book/thesis/letter/memo), and a relative path to the LaTeX template used by Pandoc.
 
 - Validation engine:
   - Uses Obsidian's metadata cache to inspect YAML frontmatter.
@@ -78,7 +78,7 @@ This project provides an Obsidian desktop-only plugin that exports markdown note
 ## Work in Progress / Near-Term Improvements
 
 - Enhance the pandocRunner preprocessor to support fenced directive blocks (e.g. ```latex-header```) for injecting custom LaTeX header content.
-- Expand the template registry with more templates and richer metadata (e.g. required frontmatter fields per template, cover pages, institutional styles).
+- Expand the template registry with more templates and richer metadata (e.g. required frontmatter fields per template, cover pages, institutional styles). Recent work added IEEE proposal, business plan, and KOMA-Script proposal templates including dedicated frontmatter validation schemas.
 - Replace hard-coded filesystem paths in pandocRunner with configuration or environment-based resolution to improve portability.
 - Integrate a proper linting setup (e.g. ESLint + TypeScript) and add automated tests for:
   - Template registry behaviour.

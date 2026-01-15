@@ -1,0 +1,16 @@
+Question context:
+- Task: add comprehensive example notes for the newly added templates (IEEE proposal, business plan, KOMA-Script proposal) for reference and demonstration.
+
+Question analysis:
+- Context: Obsidian LaTeX PDF plugin already has example notes for other templates under examples/.
+- Actual question: Create rich, realistic markdown notes that showcase recommended frontmatter and section structure for each of the three new templates.
+- Relation to previous question: Direct continuation of the earlier task where the templates and validation schemas were added and released as v0.1.34.
+- Unclear aspects:
+  - Exact naming convention for new example files (assume <template-id>-example.md under examples/).
+  - Whether _pandoc versions are also needed (likely not strictly required for now).
+- Plan:
+  - Inspect existing example notes to mirror structure and explanatory comments.
+  - Add three new example notes under examples/ with comprehensive frontmatter and section headings.
+
+Status:
+- Analysis logged; implementation of example notes not started yet.

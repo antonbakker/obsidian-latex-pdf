@@ -83,4 +83,36 @@ describe("validation/validator", () => {
     expect(result.isValid).toBe(true);
     expect(result.issues.some((i) => i.message.includes("client"))).toBe(true);
   });
+
+  it("requires title and author for IEEE proposal", async () => {
+    const frontmatter = {
+      // Missing title and author on purpose
+      abstract: "Short proposal abstract.",
+    };
+    const app = makeMockApp(frontmatter);
+    const file = makeMockFile();
+    const template = getTemplateById("ieee-proposal");
+    if (!template) throw new Error("Expected ieee-proposal template to exist");
+
+    const result = await validateFileForTemplate(app, file, template);
+    expect(result.isValid).toBe(false);
+    const messages = result.issues.map((i) => i.message).join(" ");
+    expect(messages).toContain("IEEE proposal template");
+  });
+
+  it("requires title and client for KOMA-Script proposal", async () => {
+    const frontmatter = {
+      // Missing title/client on purpose
+      project: "Example project",
+    };
+    const app = makeMockApp(frontmatter);
+    const file = makeMockFile();
+    const template = getTemplateById("koma-proposal");
+    if (!template) throw new Error("Expected koma-proposal template to exist");
+
+    const result = await validateFileForTemplate(app, file, template);
+    expect(result.isValid).toBe(false);
+    const messages = result.issues.map((i) => i.message).join(" ");
+    expect(messages).toContain("Proposal template");
+  });
 });

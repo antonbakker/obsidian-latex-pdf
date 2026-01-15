@@ -1,0 +1,137 @@
+% File: templates/business-plan/template.tex
+% Business plan template for Pandoc-generated LaTeX documents.
+% Layout goals:
+% - Clear title page with company, authors, version, and date.
+% - Optional executive summary chapter.
+% - Standard KOMA-Script report layout for the main content.
+
+\documentclass[a4paper,11pt]{scrreprt}
+
+% Encoding and fonts
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% Page layout
+\usepackage[a4paper,margin=2.5cm]{geometry}
+
+% Math and symbols
+\usepackage{amsmath,amssymb}
+
+% Tables used by Pandoc
+\usepackage{longtable,booktabs}
+\usepackage{array}
+\usepackage{calc}
+
+% Graphics and hyperlinks
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% Provide simple definitions for helper commands that Pandoc may emit.
+\providecommand{\real}[1]{#1}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+}
+
+% Dummy counter used by some Pandoc-generated table constructs
+\newcounter{none}
+
+% Code blocks and syntax highlighting
+\newenvironment{Shaded}{\begin{quote}}{\end{quote}}
+\newenvironment{Highlighting}{\begin{Shaded}}{\end{Shaded}}
+\newcommand{\AlertTok}[1]{#1}
+\newcommand{\AnnotationTok}[1]{#1}
+\newcommand{\AttributeTok}[1]{#1}
+\newcommand{\BaseNTok}[1]{#1}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{#1}
+\newcommand{\CommentTok}[1]{#1}
+\newcommand{\ConstantTok}[1]{#1}
+\newcommand{\ControlFlowTok}[1]{#1}
+\newcommand{\DataTypeTok}[1]{#1}
+\newcommand{\DecValTok}[1]{#1}
+\newcommand{\DocumentationTok}[1]{#1}
+\newcommand{\ErrorTok}[1]{#1}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{#1}
+\newcommand{\FunctionTok}[1]{#1}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{#1}
+\newcommand{\KeywordTok}[1]{#1}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{#1}
+\newcommand{\OtherTok}[1]{#1}
+\newcommand{\PreprocessorTok}[1]{#1}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{#1}
+\newcommand{\SpecialStringTok}[1]{#1}
+\newcommand{\StringTok}[1]{#1}
+\newcommand{\VariableTok}[1]{#1}
+\newcommand{\VerbatimStringTok}[1]{#1}
+\newcommand{\WarningTok}[1]{#1}
+
+% Header includes injected by Pandoc (e.g. via --include-in-header).
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+% Optional client-specific configuration (branding, logos, etc.).
+$if(client)$
+  \IfFileExists{clients/$client$/preamble.tex}{\input{clients/$client$/preamble.tex}}{}
+$endif$
+
+% Metadata from Pandoc / frontmatter
+$if(title)$
+  \title{$title$}
+$endif$
+
+$if(author)$
+  \author{$for(author)$$author$$sep$ \\ $endfor$}
+$endif$
+
+$if(date)$
+  \date{$date$}
+$else$
+  \date{\today}
+$endif$
+
+\begin{document}
+
+% Title page with company, version, and date
+\begin{titlepage}
+  \centering
+  $if(company)$
+    {\Large $company$ \\[2em]}
+  $endif$
+
+  $if(title)$
+    {\huge\bfseries $title$ \\[1.5em]}
+  $endif$
+
+  $if(subtitle)$
+    {\Large $subtitle$ \\[1.0em]}
+  $endif$
+
+  $if(author)$
+    {\large $for(author)$$author$$sep$ \\ $endfor$ \\[1.0em]}
+  $endif$
+
+  $if(version)$
+    {\large Business Plan Version $version$ \\[0.75em]}
+  $endif$
+
+  {\large $if(date)$$date$$else$\today$endif$}
+
+  \vfill
+\end{titlepage}
+
+$if(executive_summary)$
+  \chapter*{Executive Summary}
+  $executive_summary$
+$endif$
+
+$body$
+
+\end{document}

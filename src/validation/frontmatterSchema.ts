@@ -412,6 +412,156 @@ const SCHEMA_BY_TEMPLATE_ID: Record<string, TemplateFrontmatterSchema> = {
       },
     ],
   },
+
+  // IEEE proposal template – templates/ieee-proposal/template.tex
+  "ieee-proposal": {
+    templateId: "ieee-proposal",
+    label: "IEEE Proposal (conference)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "IEEE proposal template: 'title' is required to identify the proposal.",
+      },
+      {
+        key: "author",
+        type: "string|string[]",
+        missingSeverity: "error",
+        messageOnMissing:
+          "IEEE proposal template: 'author' is required. Add author: <name> or a list of author names.",
+      },
+      {
+        key: "abstract",
+        type: "markdown-string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "IEEE proposal template: 'abstract' is not set. Add an 'abstract' field to summarise the proposal.",
+      },
+      {
+        key: "keywords",
+        type: "string|string[]",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'keywords' are not set. Add keywords: [ ... ] if you want an IEEE keywords section.",
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'client' is not set. Set it only when you need a client-specific LaTeX preamble.",
+      },
+    ],
+  },
+
+  // Business plan template – templates/business-plan/template.tex
+  "business-plan": {
+    templateId: "business-plan",
+    label: "Business Plan (A4 report)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Business plan template: 'title' is required to identify the plan.",
+      },
+      {
+        key: "company",
+        type: "string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Business plan template: 'company' is not set. Add company: <name> for the title page.",
+      },
+      {
+        key: "author",
+        type: "string|string[]",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Business plan template: 'author' is not set. Add author: <name> or a list of authors.",
+      },
+      {
+        key: "version",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'version' is not set. You can add version: <string> to track iterations of the plan.",
+      },
+      {
+        key: "executive_summary",
+        type: "markdown-string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Business plan template: 'executive_summary' is not set. Add an executive summary to highlight key points.",
+      },
+      {
+        key: "date",
+        type: "date-string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'date' is not set. The template will default to today's date if omitted.",
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'client' is not set. Set it only when you need a client-specific LaTeX preamble.",
+      },
+    ],
+  },
+
+  // General KOMA-Script proposal template – templates/koma-proposal/template.tex
+  "koma-proposal": {
+    templateId: "koma-proposal",
+    label: "Proposal (KOMA-Script, A4)",
+    fields: [
+      {
+        key: "title",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Proposal template: 'title' is required to identify the proposal.",
+      },
+      {
+        key: "client",
+        type: "string",
+        missingSeverity: "error",
+        messageOnMissing:
+          "Proposal template: 'client' is required so the header can show the client name.",
+      },
+      {
+        key: "project",
+        type: "string",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Proposal template: 'project' is not set. Add project: <name> to describe the engagement.",
+      },
+      {
+        key: "proposal_id",
+        type: "string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'proposal_id' is not set. You can add an internal identifier if desired.",
+      },
+      {
+        key: "author",
+        type: "string|string[]",
+        missingSeverity: "warning",
+        messageOnMissing:
+          "Proposal template: 'author' is not set. Add author: <name> or a list of authors.",
+      },
+      {
+        key: "date",
+        type: "date-string",
+        missingSeverity: "ignore",
+        messageOnMissing:
+          "Optional 'date' is not set. The template will default to today's date if omitted.",
+      },
+    ],
+  },
 };
 
 /**
