@@ -41,12 +41,14 @@ describe('POST /init-upload', () => {
       objectKey: string;
       expiresInSeconds: number;
       maxSizeBytes: number;
+      bucket: string;
     };
 
     expect(body.uploadUrl).toBe('https://example.com/upload');
     expect(body.objectKey).toBe('uploads/mock/object.txt');
     expect(body.expiresInSeconds).toBe(600);
     expect(typeof body.maxSizeBytes).toBe('number');
+    expect(typeof body.bucket).toBe('string');
   });
 
   it('rejects missing fileName or contentType with 400', async () => {

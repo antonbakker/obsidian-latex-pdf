@@ -16,7 +16,7 @@ export interface EnvironmentIssue {
 }
 
 export interface EnvironmentSettingsLike {
-  exportBackend: "direct" | "pandoc-plugin";
+  exportBackend: "direct" | "pandoc-plugin" | "service";
   pandocPath: string;
   pdfEngineBinary: string;
   enableLatexProfiles?: boolean;

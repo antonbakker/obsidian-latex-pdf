@@ -5,6 +5,7 @@ import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import multipart from '@fastify/multipart';
 import { S3Client, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
+import jwt from 'jsonwebtoken';
 import { renderDocument, DocumentFormat, RenderOutputFormat, RenderOptions } from './renderer';
 import { createPresignedUploadUrl } from './s3Uploads';
 
@@ -40,6 +41,7 @@ interface InitUploadResponseBody {
   objectKey: string;
   expiresInSeconds: number;
   maxSizeBytes: number;
+  bucket: string;
 }
 
 interface RenderFromS3RequestBody {
@@ -56,6 +58,7 @@ const JSON_MAX_BYTES = Number(process.env.JSON_MAX_BYTES ?? 1048576); // 1 MB
 const MULTIPART_MAX_BYTES = Number(process.env.MULTIPART_MAX_BYTES ?? 10485760); // 10 MB
 const S3_OBJECT_MAX_BYTES = Number(process.env.S3_OBJECT_MAX_BYTES ?? 104857600); // 100 MB
 const DEFAULT_LATEX_ENGINE = process.env.LATEX_ENGINE || 'xelatex';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'eu-west-1',
@@ -74,6 +77,28 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
     chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
   }
   return Buffer.concat(chunks);
+}
+
+function verifyJwtFromHeader(request: FastifyRequest, reply: FastifyReply): boolean {
+  // If no secret is configured, treat the API as public.
+  if (!JWT_SECRET) {
+    return true;
+  }
+
+  const header = request.headers['authorization'];
+  if (!header || !header.toString().startsWith('Bearer ')) {
+    sendError(reply, 401, 'UNAUTHORIZED', 'Missing Authorization header');
+    return false;
+  }
+
+  const token = header.toString().slice('Bearer '.length);
+  try {
+    jwt.verify(token, JWT_SECRET);
+    return true;
+  } catch {
+    sendError(reply, 401, 'UNAUTHORIZED', 'Invalid or expired token');
+    return false;
+  }
 }
 
 // --- Server factory --------------------------------------------------------
@@ -98,6 +123,8 @@ export async function createServer(): Promise<FastifyInstance> {
 
   // JSON endpoint
   app.post('/render-json', async (request: FastifyRequest<{ Body: RenderJsonRequestBody }>, reply: FastifyReply) => {
+    if (!verifyJwtFromHeader(request, reply)) return;
+
     const { content, format, output, options } = request.body;
 
     const rawLength = Buffer.byteLength(JSON.stringify(request.body), 'utf8');
@@ -120,6 +147,8 @@ export async function createServer(): Promise<FastifyInstance> {
 
   // Multipart endpoint (stub implementation)
   app.post('/render-upload', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!verifyJwtFromHeader(request, reply)) return;
+
     const parts = request.parts();
     let filePart: any;
     let metadataPart: RenderUploadMetadata | undefined;
@@ -159,6 +188,8 @@ export async function createServer(): Promise<FastifyInstance> {
 
   // init-upload endpoint
   app.post('/init-upload', async (request: FastifyRequest<{ Body: InitUploadRequestBody }>, reply: FastifyReply) => {
+    if (!verifyJwtFromHeader(request, reply)) return;
+
     const { fileName, contentType, expectedSizeBytes } = request.body;
 
     if (!fileName || !contentType) {
@@ -188,6 +219,7 @@ export async function createServer(): Promise<FastifyInstance> {
         objectKey,
         expiresInSeconds,
         maxSizeBytes,
+        bucket,
       };
 
       reply.send(response);
@@ -201,6 +233,8 @@ export async function createServer(): Promise<FastifyInstance> {
   app.post(
     '/render-from-s3',
     async (request: FastifyRequest<{ Body: RenderFromS3RequestBody }>, reply: FastifyReply) => {
+      if (!verifyJwtFromHeader(request, reply)) return;
+
       const { bucket, key, format, output, options } = request.body;
 
       if (!bucket || !key) {

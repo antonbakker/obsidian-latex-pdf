@@ -94,6 +94,11 @@ async function renderMarkdownToPdf(
     args.push('-V', `margin=${options.margin}`);
   }
 
+  if (options?.templateId) {
+    const templatePath = `/templates/${options.templateId}.tex`;
+    args.push('--template', templatePath);
+  }
+
   await runCommand('pandoc', args, workDir);
   return fs.readFile(outputPath);
 }
@@ -113,9 +118,8 @@ async function renderMarkdownToLatex(
   ];
 
   if (options?.templateId) {
-    // Example hook: map templateId to a LaTeX template path inside the container.
-    // const templatePath = `/templates/${options.templateId}.tex`;
-    // args.push('--template', templatePath);
+    const templatePath = `/templates/${options.templateId}.tex`;
+    args.push('--template', templatePath);
   }
 
   await runCommand('pandoc', args, workDir);

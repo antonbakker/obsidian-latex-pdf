@@ -1,6 +1,6 @@
 {
   "name": "obsidian-latex-pdf",
-  "version": "0.1.37",
+  "version": "1.0.0",
   "description": "Obsidian plugin to export notes to PDF via Pandoc and LaTeX templates.",
   "main": "main.js",
   "scripts": {
@@ -26,6 +26,8 @@
     "@aws-sdk/client-s3": ">=3.971.0",
     "@aws-sdk/s3-request-presigner": ">=3.971.0",
     "@fastify/multipart": ">=9.3.0",
-    "fastify": ">=5.7.1"
+    "@types/jsonwebtoken": ">=9.0.10",
+    "fastify": ">=5.7.1",
+    "jsonwebtoken": ">=9.0.3"
   }
 }

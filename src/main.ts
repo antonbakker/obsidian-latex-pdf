@@ -11,11 +11,11 @@ import {
 import { getAvailableTemplates, getTemplateById } from "./templateRegistry";
 import { TemplatePickerModal } from "./ui/TemplatePickerModal";
 import { PrintModal } from "./ui/PrintModal";
-import { exportNoteToPdf } from "./exportRunner";
+import { exportNoteToPdf, exportNoteViaService } from "./exportRunner";
 import { validateFileForTemplate } from "./validation/validator";
 import { validateEnvironmentForTemplate } from "./validation/environment";
 
-type ExportBackend = "direct" | "pandoc-plugin";
+type ExportBackend = "direct" | "pandoc-plugin" | "service";
 
 interface LatexPdfPluginSettings {
   pandocPath: string;
@@ -40,6 +40,10 @@ interface LatexPdfPluginSettings {
    * a subdirectory containing a `preamble.tex` file.
    */
   latexProfileBaseDir: string;
+  /** Base URL of the remote HTTP rendering service (e.g. https://pdf.example.com). */
+  serviceBaseUrl?: string;
+  /** Optional JWT token to send as Authorization: Bearer <token> to the service. */
+  serviceJwtToken?: string;
 }
 
 const DEFAULT_SETTINGS: LatexPdfPluginSettings = {
@@ -51,6 +55,8 @@ const DEFAULT_SETTINGS: LatexPdfPluginSettings = {
   pandocCommandId: "",
   enableLatexProfiles: false,
   latexProfileBaseDir: "",
+  serviceBaseUrl: "",
+  serviceJwtToken: "",
 };
 
 export default class LatexPdfPlugin extends Plugin {
@@ -198,6 +204,11 @@ export default class LatexPdfPlugin extends Plugin {
               `Could not execute Pandoc plugin command '${cmdId}'. Check that the Pandoc plugin is installed and the command ID is correct.`,
             );
           }
+        } else if (this.settings.exportBackend === "service") {
+          await exportNoteViaService(this.app, file, template, {
+            baseUrl: this.settings.serviceBaseUrl || "",
+            jwtToken: this.settings.serviceJwtToken || "",
+          });
         } else {
           await exportNoteToPdf(this.app, file, template, {
             pandocPath: this.settings.pandocPath,
@@ -233,11 +244,12 @@ class LatexPdfSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Export backend")
       .setDesc(
-        "Choose whether to call pandoc directly or delegate to the existing Pandoc plugin.",
+        "Choose whether to call pandoc directly, use the Pandoc plugin, or send notes to a remote HTTP service.",
       )
       .addDropdown((dropdown) => {
         dropdown.addOption("pandoc-plugin", "Use Pandoc plugin (recommended)");
         dropdown.addOption("direct", "Direct pandoc (experimental)");
+        dropdown.addOption("service", "Remote HTTP service");
         dropdown.setValue(this.plugin.settings.exportBackend);
         dropdown.onChange(async (value: ExportBackend) => {
           this.plugin.settings.exportBackend = value;
@@ -316,6 +328,35 @@ class LatexPdfSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.pdfEngineBinary || "")
           .onChange(async (value) => {
             this.plugin.settings.pdfEngineBinary = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    // Remote HTTP service settings
+    new Setting(containerEl)
+      .setName("Remote service base URL")
+      .setDesc("Base URL of the HTTP rendering service (e.g. https://pdf.example.com).")
+      .addText((text) =>
+        text
+          .setPlaceholder("https://pdf.example.com")
+          .setValue(this.plugin.settings.serviceBaseUrl || "")
+          .onChange(async (value) => {
+            this.plugin.settings.serviceBaseUrl = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Remote service JWT token")
+      .setDesc(
+        "Optional JWT token sent as 'Authorization: Bearer <token>' to authenticate with the remote service.",
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+          .setValue(this.plugin.settings.serviceJwtToken || "")
+          .onChange(async (value) => {
+            this.plugin.settings.serviceJwtToken = value.trim();
             await this.plugin.saveSettings();
           }),
       );

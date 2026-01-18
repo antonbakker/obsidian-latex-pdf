@@ -417,6 +417,8 @@ async function runPandocToPdf(opts) {
 }
 
 // src/exportRunner.ts
+var fs2 = __toESM(require("fs/promises"));
+var path2 = __toESM(require("path"));
 async function exportNoteToPdf(app, file, template, settings) {
   try {
     const outputPath = await runPandocToPdf({
@@ -429,6 +431,102 @@ async function exportNoteToPdf(app, file, template, settings) {
   } catch (error) {
     console.error("Pandoc export failed", error);
     new import_obsidian3.Notice("LaTeX PDF export failed. Check console for details.");
+  }
+}
+async function exportNoteViaService(app, file, template, settings) {
+  const baseUrl = (settings.baseUrl || "").trim();
+  if (!baseUrl) {
+    new import_obsidian3.Notice("Remote service base URL is not configured. Set it in the LaTeX PDF settings.");
+    return;
+  }
+  try {
+    const content = await app.vault.read(file);
+    const encoder = new TextEncoder();
+    const utf8 = encoder.encode(content);
+    const sizeBytes = utf8.length;
+    const JSON_THRESHOLD = 1024 * 1024;
+    const base = baseUrl.replace(/\/+$/, "");
+    const headers = {};
+    if (settings.jwtToken) {
+      headers["Authorization"] = `Bearer ${settings.jwtToken}`;
+    }
+    let pdfBuffer;
+    if (sizeBytes <= JSON_THRESHOLD) {
+      const url = `${base}/render-json`;
+      const response = await (0, import_obsidian3.requestUrl)({
+        url,
+        method: "POST",
+        body: JSON.stringify({
+          content,
+          format: "markdown",
+          output: "pdf",
+          options: { templateId: template.id }
+        }),
+        headers: {
+          ...headers,
+          "Content-Type": "application/json"
+        }
+      });
+      const arrayBuffer = response.arrayBuffer;
+      pdfBuffer = Buffer.from(arrayBuffer);
+    } else {
+      const initUrl = `${base}/init-upload`;
+      const initResp = await (0, import_obsidian3.requestUrl)({
+        url: initUrl,
+        method: "POST",
+        body: JSON.stringify({
+          fileName: `${file.basename}.md`,
+          contentType: "text/markdown; charset=utf-8",
+          expectedSizeBytes: sizeBytes
+        }),
+        headers: {
+          ...headers,
+          "Content-Type": "application/json"
+        }
+      });
+      const initBody = initResp.json;
+      await (0, import_obsidian3.requestUrl)({
+        url: initBody.uploadUrl,
+        method: "PUT",
+        body: content,
+        headers: {
+          "Content-Type": "text/markdown; charset=utf-8"
+        }
+      });
+      const renderUrl = `${base}/render-from-s3`;
+      const renderResp = await (0, import_obsidian3.requestUrl)({
+        url: renderUrl,
+        method: "POST",
+        body: JSON.stringify({
+          bucket: initBody.bucket,
+          key: initBody.objectKey,
+          format: "markdown",
+          output: "pdf",
+          options: { templateId: template.id }
+        }),
+        headers: {
+          ...headers,
+          "Content-Type": "application/json"
+        }
+      });
+      const renderArrayBuffer = renderResp.arrayBuffer;
+      pdfBuffer = Buffer.from(renderArrayBuffer);
+    }
+    const notePath = file.path;
+    const noteDir = notePath.includes("/") ? notePath.substring(0, notePath.lastIndexOf("/")) : "";
+    const noteBase = file.basename;
+    const vaultBasePath = app.vault.adapter?.basePath;
+    if (!vaultBasePath) {
+      new import_obsidian3.Notice("Cannot resolve vault base path to write PDF.");
+      return;
+    }
+    const outputDir = noteDir ? path2.join(vaultBasePath, noteDir) : vaultBasePath;
+    const outputPath = path2.join(outputDir, `${noteBase}.pdf`);
+    await fs2.writeFile(outputPath, pdfBuffer);
+    new import_obsidian3.Notice(`Remote LaTeX PDF exported: ${outputPath}`);
+  } catch (error) {
+    console.error("Remote export failed", error);
+    new import_obsidian3.Notice("Remote LaTeX PDF export failed. Check console for details.");
   }
 }
 
@@ -934,13 +1032,13 @@ async function validateFileForTemplate(app, file, template) {
 
 // src/validation/environment.ts
 var import_fs = require("fs");
-var path2 = __toESM(require("path"));
+var path3 = __toESM(require("path"));
 function validateEnvironmentForTemplate(app, file, template, settings) {
   const issues = [];
   if (settings.exportBackend === "direct") {
     if (template.pandocTemplateRelativePath) {
       const pluginTemplateBase = "/Users/anton/Development/989646093931/obsidian-latex-pdf";
-      const templatePath = path2.join(pluginTemplateBase, template.pandocTemplateRelativePath);
+      const templatePath = path3.join(pluginTemplateBase, template.pandocTemplateRelativePath);
       const exists = (0, import_fs.existsSync)(templatePath);
       if (!exists) {
         issues.push({
@@ -978,13 +1076,13 @@ function validateEnvironmentForTemplate(app, file, template, settings) {
       const baseDir = settings.latexProfileBaseDir;
       const vaultBasePath = app.vault.adapter?.basePath;
       let baseAbs;
-      if (path2.isAbsolute(baseDir) || /^[A-Za-z]:[\\/]/.test(baseDir)) {
+      if (path3.isAbsolute(baseDir) || /^[A-Za-z]:[\\/]/.test(baseDir)) {
         baseAbs = baseDir;
       } else if (vaultBasePath) {
-        baseAbs = path2.join(vaultBasePath, baseDir);
+        baseAbs = path3.join(vaultBasePath, baseDir);
       }
       if (baseAbs) {
-        const candidate = path2.join(baseAbs, profileId, "preamble.tex");
+        const candidate = path3.join(baseAbs, profileId, "preamble.tex");
         if (!(0, import_fs.existsSync)(candidate)) {
           issues.push({
             level: "warning",
@@ -1006,7 +1104,9 @@ var DEFAULT_SETTINGS = {
   exportBackend: "pandoc-plugin",
   pandocCommandId: "",
   enableLatexProfiles: false,
-  latexProfileBaseDir: ""
+  latexProfileBaseDir: "",
+  serviceBaseUrl: "",
+  serviceJwtToken: ""
 };
 var LatexPdfPlugin = class extends import_obsidian4.Plugin {
   async onload() {
@@ -1128,6 +1228,11 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
               `Could not execute Pandoc plugin command '${cmdId}'. Check that the Pandoc plugin is installed and the command ID is correct.`
             );
           }
+        } else if (this.settings.exportBackend === "service") {
+          await exportNoteViaService(this.app, file, template, {
+            baseUrl: this.settings.serviceBaseUrl || "",
+            jwtToken: this.settings.serviceJwtToken || ""
+          });
         } else {
           await exportNoteToPdf(this.app, file, template, {
             pandocPath: this.settings.pandocPath,
@@ -1153,10 +1258,11 @@ var LatexPdfSettingTab = class extends import_obsidian4.PluginSettingTab {
     containerEl.empty();
     containerEl.createEl("h2", { text: "Obsidian LaTeX PDF Settings" });
     new import_obsidian4.Setting(containerEl).setName("Export backend").setDesc(
-      "Choose whether to call pandoc directly or delegate to the existing Pandoc plugin."
+      "Choose whether to call pandoc directly, use the Pandoc plugin, or send notes to a remote HTTP service."
     ).addDropdown((dropdown) => {
       dropdown.addOption("pandoc-plugin", "Use Pandoc plugin (recommended)");
       dropdown.addOption("direct", "Direct pandoc (experimental)");
+      dropdown.addOption("service", "Remote HTTP service");
       dropdown.setValue(this.plugin.settings.exportBackend);
       dropdown.onChange(async (value) => {
         this.plugin.settings.exportBackend = value;
@@ -1203,6 +1309,20 @@ var LatexPdfSettingTab = class extends import_obsidian4.PluginSettingTab {
     ).addText(
       (text) => text.setPlaceholder("/Library/TeX/texbin/xelatex").setValue(this.plugin.settings.pdfEngineBinary || "").onChange(async (value) => {
         this.plugin.settings.pdfEngineBinary = value.trim();
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian4.Setting(containerEl).setName("Remote service base URL").setDesc("Base URL of the HTTP rendering service (e.g. https://pdf.example.com).").addText(
+      (text) => text.setPlaceholder("https://pdf.example.com").setValue(this.plugin.settings.serviceBaseUrl || "").onChange(async (value) => {
+        this.plugin.settings.serviceBaseUrl = value.trim();
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian4.Setting(containerEl).setName("Remote service JWT token").setDesc(
+      "Optional JWT token sent as 'Authorization: Bearer <token>' to authenticate with the remote service."
+    ).addText(
+      (text) => text.setPlaceholder("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...").setValue(this.plugin.settings.serviceJwtToken || "").onChange(async (value) => {
+        this.plugin.settings.serviceJwtToken = value.trim();
         await this.plugin.saveSettings();
       })
     );
