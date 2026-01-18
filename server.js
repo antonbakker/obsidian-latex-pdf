@@ -69362,7 +69362,13 @@ async function createServer() {
     bodyLimit: MULTIPART_MAX_BYTES
   });
   await app.register(import_multipart.default);
-  app.get("/health", async () => ({ status: "ok" }));
+  const healthHandler = async () => ({
+    status: "ok",
+    service: "obsidian-latex-pdf",
+    version: process.env.npm_package_version ?? "unknown"
+  });
+  app.get("/health", healthHandler);
+  app.get("/", healthHandler);
   app.post("/render-json", async (request, reply) => {
     const { content, format: format2, output, options } = request.body;
     const rawLength = Buffer.byteLength(JSON.stringify(request.body), "utf8");

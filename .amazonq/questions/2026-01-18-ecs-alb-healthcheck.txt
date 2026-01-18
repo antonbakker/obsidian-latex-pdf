@@ -1,0 +1,9 @@
+Context: Deployment of obsidian-latex-pdf web service on AWS (likely ECS with ALB) is failing. ALB target group reports tasks failing health checks, and container logs show Fastify-style JSON logs where GET / returns 404 ("Route GET:/ not found"). Exit code 137 with stop code ServiceSchedulerInitiated indicates ECS stopped the task after failed health checks.
+
+Actual question: "Could you solve these issues?" Specifically, fix the deployment so that tasks pass ALB health checks and the service remains healthy.
+
+Unclear aspects: Exact AWS infrastructure (ECS vs other), precise ALB health check path and expected behavior, and whether a dedicated health endpoint already exists in the app. Also unclear whether exit code 137 is solely due to scheduler stop or any resource constraints.
+
+Improvement approach: (1) Analyze app server code (likely src/server.ts using Fastify) to map existing routes and any health endpoints; (2) Ensure there is a route that returns 200 on the ALB health check path (either by adding GET / or configuring ALB to use an existing health path); (3) Rebuild and redeploy, verifying health checks succeed.
+
+Status: Analysis started. Next steps are to inspect src/server.ts and routing, implement a suitable health/root route, run tests/build, and then redeploy.

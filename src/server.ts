@@ -86,8 +86,15 @@ export async function createServer(): Promise<FastifyInstance> {
 
   await app.register(multipart);
 
-  // Health check endpoint for smoke tests
-  app.get('/health', async () => ({ status: 'ok' }));
+  // Health check endpoints for load balancers and smoke tests
+  const healthHandler = async () => ({
+    status: 'ok',
+    service: 'obsidian-latex-pdf',
+    version: process.env.npm_package_version ?? 'unknown',
+  });
+
+  app.get('/health', healthHandler);
+  app.get('/', healthHandler);
 
   // JSON endpoint
   app.post('/render-json', async (request: FastifyRequest<{ Body: RenderJsonRequestBody }>, reply: FastifyReply) => {
