@@ -20,7 +20,16 @@
 \usepackage{setspace}
 \setstretch{1.1}
 
+% Lists: allow deeper nesting for complex documents
+\usepackage{enumitem}
+\setlistdepth{9}
+\renewlist{itemize}{itemize}{9}
+\setlist[itemize]{label=\textbullet}
+\renewlist{enumerate}{enumerate}{9}
+\setlist[enumerate]{label=\arabic*.}
+
 % Tables and alignment helpers for the header block
+\usepackage{longtable,booktabs}
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{calc}
@@ -102,13 +111,10 @@ $endif$
 
 % Header block summarising key proposal metadata.
 \noindent
-\renewcommand{\arraystretch}{1.2}% a bit more vertical space
-\begin{tabularx}{\linewidth}{>{\bfseries}p{3cm}X}
-Client: & $if(client)$$client$$else$\textit{(set client in frontmatter)}$endif$ \\
-Project: & $if(project)$$project$$else$\textit{(set project in frontmatter)}$endif$ \\
-Proposal ID: & $if(proposal_id)$$proposal_id$$else$\textit{(optional proposal_id)}$endif$ \\
-Date: & $if(date)$$date$$else$\today$endif$ \\
-\end{tabularx}
+$if(client)$Client: $client$\\$else$Client: \textit{(set client in frontmatter)}\\$endif$
+$if(project)$Project: $project$\\$else$Project: \textit{(set project in frontmatter)}\\$endif$
+$if(proposal_id)$Proposal ID: $proposal_id$\\$else$Proposal ID: \textit{(optional proposal ID)}\\$endif$
+Date: $if(date)$$date$$else$\today$endif$\\
 
 \vspace{1.5em}
 \hrule

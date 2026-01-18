@@ -1,0 +1,67 @@
+name: Build, Test and Publish HTTP API Image
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build plugin and server
+        run: |
+          npm run build
+          npm run build:server
+
+      - name: Run tests
+        run: npm test
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/obsidian-latex-pdf
+          docker build -t $IMAGE_NAME:latest .
+          # Derive version tag: use git tag (without leading v) or package.json version on master
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          docker tag $IMAGE_NAME:latest $IMAGE_NAME:$VERSION
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "IMAGE_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Push Docker image
+        run: |
+          IMAGE_NAME=${IMAGE_NAME}
+          IMAGE_VERSION=${IMAGE_VERSION}
+          docker push $IMAGE_NAME:latest
+          if [ -n "$IMAGE_VERSION" ]; then
+            docker push $IMAGE_NAME:$IMAGE_VERSION
+          fi

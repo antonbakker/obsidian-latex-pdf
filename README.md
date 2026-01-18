@@ -296,6 +296,21 @@ proposal_id: "PR-2026-001"
 Summarise the proposal for the client.
 ```
 
+## Choosing a template
+
+Use this as a quick guide to pick a template:
+
+- **Article (A4)** – Good all-round technical spec layout; supports deep lists and standard tables.
+- **Report (A4)** – Longer technical reports with chapters.
+- **Kaobook / Thesis** – Book- or thesis-style documents.
+- **Business plan** – Business plans and longer product/initiative documents; supports deep lists and wide tables.
+- **IEEE proposal** – IEEE-style proposals; now uses a single column so `longtable` works.
+- **KOMA-Script proposal** – Client-facing proposals on A4, suitable for shorter documents; can handle tables but is less suited to extremely long, deeply nested specs.
+- **Letter / Memo** – One-page business letters and internal memos.
+
+For large, table-heavy design documents like the financial and labour bookings
+specs, `article` or `business-plan` are usually the best fit.
+
 ## Frontmatter and validation details
 
 The plugin validates each note before export using a schema that depends on the selected template. If any **error**-level issues are found, the Export button is disabled and PDF generation is blocked.

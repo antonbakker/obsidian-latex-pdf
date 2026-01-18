@@ -1,0 +1,39 @@
+Question analysis (2026-01-18T08:33:22Z)
+
+Context:
+- Project: obsidian-latex-pdf (Obsidian plugin with AWS CDK Fargate backend)
+- Current issue: AWS ECS/Fargate deployment failing with Stop code TaskFailedToStart and CannotPullContainerError.
+- Error details: CannotPullContainerError: pull image manifest retried; failed to authorize anonymous pull for image ghcr.io/antonbakker/obsidian-latex-pdf:latest with 403 Forbidden from ghcr.io token endpoint.
+
+Relation to previous questions:
+- This appears as a new, self-contained deployment issue for the backend service.
+- No direct dependency on previous questions is required to interpret this problem.
+
+What is being asked:
+- Diagnose why the ECS task cannot pull the container image from GHCR.
+- Propose and, where appropriate in this repo, implement corrections so deployments succeed.
+
+Clarity assessment:
+- The problem is clearly described by the ECS error message.
+- Environment context (CDK app, image name/imageTag props, GHCR image URL) is sufficient to reason about the failure.
+- No additional clarification from the user is required before proceeding.
+
+Plan to improve results:
+- Inspect the CDK stack to see how the container image is configured.
+- Verify that the image is referenced from GHCR and whether any credentials or repository credentials are configured.
+- Determine whether the fix should be:
+  - Supplying registry credentials (via AWS Secrets Manager and ECS repositoryCredentials), or
+  - Migrating to Amazon ECR and updating CDK + pipeline, or
+  - Making the GHCR package public (if that matches the desired security posture).
+- Make minimal, clear changes in this repo (likely CDK) and document what the user needs to configure in AWS/GitHub.
+
+Status / outcomes:
+- Initial analysis recorded; root-cause and concrete code/configuration changes still to be determined.
+- This file should be updated after the fix is identified and implemented.
+
+Outcome (2026-01-18T08:40:00Z):
+- Root cause: ECS task tries to pull ghcr.io/antonbakker/obsidian-latex-pdf:latest anonymously because the CDK stack uses ContainerImage.fromRegistry without registry credentials, and the GHCR package is private so the token endpoint returns 403 Forbidden.
+- Fix options:
+  - Recommended: make the GHCR package obsidian-latex-pdf public so ECS can pull it without authentication.
+  - Alternative: keep the package private and configure ECS/CDK with registry credentials via an AWS Secrets Manager secret containing GHCR username/token, passed to ContainerImage.fromRegistry as credentials.
+- No application code changes are strictly required; deployment should succeed once registry visibility or credentials are corrected.

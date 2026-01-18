@@ -1,0 +1,21 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "6a2af369a4a372e14d8e41defb091864e27452df06518c5f8223b1914388f7e5": {
+      "displayName": "ObsidianLatexPdfStack Template",
+      "source": {
+        "path": "ObsidianLatexPdfStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "989646093931-eu-west-1-1b0e1c82": {
+          "bucketName": "cdk-default-assets-989646093931-eu-west-1",
+          "objectKey": "6a2af369a4a372e14d8e41defb091864e27452df06518c5f8223b1914388f7e5.json",
+          "region": "eu-west-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::989646093931:role/cdk-default-file-publishing-role-989646093931-eu-west-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

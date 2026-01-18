@@ -19,6 +19,14 @@
 % Math and symbols
 \usepackage{amsmath,amssymb}
 
+% Lists: allow deeper nesting for complex documents
+\usepackage{enumitem}
+\setlistdepth{9}
+\renewlist{itemize}{itemize}{9}
+\setlist[itemize]{label=\textbullet}
+\renewlist{enumerate}{enumerate}{9}
+\setlist[enumerate]{label=\arabic*.}
+
 % Tables used by Pandoc
 \usepackage{longtable,booktabs}
 \usepackage{array}

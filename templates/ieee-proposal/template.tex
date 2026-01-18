@@ -3,6 +3,8 @@
 % This template is intentionally minimal and focuses on robustness when used
 % from Obsidian via the obsidian-latex-pdf plugin.
 
+% Use IEEEtran conference style but force one-column mode so that longtable
+% works correctly for wide tables.
 \documentclass[conference]{IEEEtran}
 
 % Encoding and fonts
@@ -13,6 +15,13 @@
 % Math and symbols
 \usepackage{amsmath,amssymb}
 
+% Lists: allow deeper nesting for complex documents
+\usepackage{enumitem}
+\setlistdepth{9}
+\renewlist{itemize}{itemize}{9}
+\setlist[itemize]{label=\textbullet}
+\renewlist{enumerate}{enumerate}{9}
+\setlist[enumerate]{label=\arabic*.}
 % Tables and column helpers used by Pandoc's LaTeX output
 \usepackage{longtable,booktabs}
 \usepackage{array} % for >{\raggedright\arraybackslash}p{...} column types
@@ -96,6 +105,9 @@ $else$
 $endif$
 
 \begin{document}
+
+% Force one-column layout so that longtable is allowed.
+\onecolumn
 
 $if(title)$
   \maketitle
