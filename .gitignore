@@ -1,5 +1,47 @@
+# Node / TypeScript / Obsidian plugin
 node_modules/
-.DS_Store
+main.js
 main.js.map
+server.js
+
+# Build artifacts
+.dist/
+coverage/
+.vitest/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
+
+# Env / local config
+.env
+.env.*
+.envrc
+
+# LaTeX / Pandoc temporary files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# Local PDFs produced during testing (keep example PDFs out of git)
+*.pdf
+
+# Obsidian workspace local state (if present alongside tests/examples)
+.obsidian/workspace.json
+.obsidian/workspace-*.json
