@@ -520,6 +520,13 @@
       "FromPort": 80,
       "IpProtocol": "tcp",
       "ToPort": 80
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow from anyone on port 443",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
      }
     ],
     "VpcId": {
@@ -593,6 +600,34 @@
    },
    "Metadata": {
     "aws:cdk:path": "ObsidianLatexPdfStack/Service/LB/PublicListener/ECSGroup/Resource"
+   }
+  },
+  "ServiceLBHttpsListener6DCFAB64": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "Certificates": [
+     {
+      "CertificateArn": {
+       "Ref": "AlbCertificate2652E3A6"
+      }
+     }
+    ],
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "ServiceLBPublicListenerECSGroup0CC8688C"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "ServiceLBE9A1ADBC"
+    },
+    "Port": 443,
+    "Protocol": "HTTPS"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ObsidianLatexPdfStack/Service/LB/HttpsListener/Resource"
    }
   },
   "ServiceTaskDefTaskRole0CFE2F57": {
@@ -691,6 +726,10 @@
        {
         "Name": "LATEX_ENGINE",
         "Value": "xelatex"
+       },
+       {
+        "Name": "JWT_SECRET",
+        "Value": "KNF+/w9FTiyneAabV0SeXDgFelWqwExXOijCSZAtha8="
        }
       ],
       "Essential": true,
@@ -852,6 +891,7 @@
     }
    },
    "DependsOn": [
+    "ServiceLBHttpsListener6DCFAB64",
     "ServiceLBPublicListenerECSGroup0CC8688C",
     "ServiceLBPublicListener46709EAA",
     "ServiceTaskDefTaskRoleDefaultPolicy9CCB4F8E",
@@ -912,10 +952,65 @@
     "aws:cdk:path": "ObsidianLatexPdfStack/Service/Service/SecurityGroup/from ObsidianLatexPdfStackServiceLBSecurityGroupB14451BA:8080"
    }
   },
+  "AlbCertificate2652E3A6": {
+   "Type": "AWS::CertificateManager::Certificate",
+   "Properties": {
+    "DomainName": "latex.bi5.nl",
+    "DomainValidationOptions": [
+     {
+      "DomainName": "latex.bi5.nl",
+      "HostedZoneId": "Z07923173PE42F1Y18DA6"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ObsidianLatexPdfStack/AlbCertificate"
+     }
+    ],
+    "ValidationMethod": "DNS"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ObsidianLatexPdfStack/AlbCertificate/Resource"
+   }
+  },
+  "ServiceAliasRecord7C72B6F0": {
+   "Type": "AWS::Route53::RecordSet",
+   "Properties": {
+    "AliasTarget": {
+     "DNSName": {
+      "Fn::Join": [
+       "",
+       [
+        "dualstack.",
+        {
+         "Fn::GetAtt": [
+          "ServiceLBE9A1ADBC",
+          "DNSName"
+         ]
+        }
+       ]
+      ]
+     },
+     "HostedZoneId": {
+      "Fn::GetAtt": [
+       "ServiceLBE9A1ADBC",
+       "CanonicalHostedZoneID"
+      ]
+     }
+    },
+    "HostedZoneId": "Z07923173PE42F1Y18DA6",
+    "Name": "latex.bi5.nl.",
+    "Type": "A"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ObsidianLatexPdfStack/ServiceAliasRecord/Resource"
+   }
+  },
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31S227CMAz9lr2HbALxAcAYQkJb1SJeUZqazrQkVS5FqOq/L00o7S7ak49PjuMcO1M6nc3pyxO76gnPikmJKW0Sw3hBHHVs9Iw2S8sLMGR1EgG1BPiUNoeKd9whWpHIpiXyxKYi6AYUS2tgz9ISBn7gFlpLjsygFA9xB9bbqAvvzGyYgSu7kUhh7eBw8VYYUA73gvCSe7YwzsHnBYQhCXCr0Nw2StrKv+FfYp0r0PoXvRWe75xr2qxKq133TtXDN6Zy1rnSxSucUGDv6ScjhWEoQI24e20CqkYe5hSgb3esmOmsarqoKjdlP62dZNmSlUxwyH6UQ8m0QV46ReoVKPLarevvam/iWz7WofMm7poej873rrPbQD/IUdoSZBfaxDLs3cdIujq/qIBaUsrcTXMn88cVPW5bEoOWVoV5fFhTWffvhMyAnvVzPZ3Tmfu1Z404UVYYvACNQ/wCN45PWtICAAA="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31T227bMAz9lr0r6pA2H5BmXRCgaA276GtBy4zHxpEMXVIUhv99lBTXWTv0SYfHh6J4SC/l8nolf/6AN7dQzWHRUS2HyoM6CKZeBncth9ugDujFZq8zGgWqpRyeexW552IjilB3pKpQ66ybUWmCxyeoO5z5mVs7ZxSBJ6M/xBHc7Yp4PIDfgsc3eBeFpRPD+eKd9mgZT4L8knO09tzBnyNqLypUwZJ/31oT+vSGb4m71qJzX+idTnzs3Mlh0wXH1aNqgr/BthC7codfuCdNU0+fGaM9kEZ7wZ1zK7QnUtmnDFO5lx58bNXJdd+zy8mtewPNLXSgFTaf0rED50l1rKiTgnR74nH9Pzs18U98qSPuTZ81E774/sSVeQKTkRfhKAiOcihNnns6C8N5aVAZjaIzLbt5b9qPKyY8Cn6Kp30shEfQ0KJl32cueT+Ho7Bxd1a8resSlbFNKptQxRs7ihKdCTbb+xh8H3iNtWlQvrqr03Ilb/gneHVECxu0pyPKMp9/AdtsKhAhAwAA"
    },
    "Metadata": {
     "aws:cdk:path": "ObsidianLatexPdfStack/CDKMetadata/Default"

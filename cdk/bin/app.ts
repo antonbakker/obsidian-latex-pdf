@@ -36,8 +36,16 @@ if (!ghOwner) {
 const imageName = `ghcr.io/${ghOwner}/obsidian-latex-pdf`;
 const imageTag = process.env.IMAGE_TAG || 'latest';
 
+// Optional domain configuration for HTTPS + DNS wiring.
+// SERVICE_DOMAIN: root domain, e.g. "example.com"
+// SERVICE_SUBDOMAIN: subdomain, e.g. "latex" → full host latex.example.com
+const serviceDomain = process.env.SERVICE_DOMAIN;
+const serviceSubdomain = process.env.SERVICE_SUBDOMAIN;
+
 new ObsidianLatexPdfStack(app, 'ObsidianLatexPdfStack', {
   env: { account, region },
   imageName,
   imageTag,
+  serviceDomain,
+  serviceSubdomain,
 });

@@ -3,5 +3,9 @@
     "eu-west-1a",
     "eu-west-1b",
     "eu-west-1c"
-  ]
+  ],
+  "hosted-zone:account=989646093931:domainName=bi5.nl:region=eu-west-1": {
+    "Id": "/hostedzone/Z07923173PE42F1Y18DA6",
+    "Name": "bi5.nl."
+  }
 }

@@ -15,6 +15,18 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 
+# Copy templates
+COPY templates/article/template.tex /templates/article.tex
+COPY templates/business-plan/template.tex /templates/business-plan.tex
+COPY templates/common/template.tex /templates/common.tex
+COPY templates/ieee-proposal/template.tex /templates/ieee-proposal.tex
+COPY templates/kaobook/template.tex /templates/kaobook.tex
+COPY templates/koma-proposal/template.tex /templates/koma-proposal.tex
+COPY templates/letter/template.tex /templates/letter.tex
+COPY templates/memo/template.tex /templates/memo.tex
+COPY templates/report/template.tex /templates/report.tex
+COPY templates/thesis-kaobook/template.tex /templates/thesis-kaobook.tex
+
 # Build server bundle (uses esbuild via package.json script)
 RUN npm run build:server
 

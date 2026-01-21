@@ -1,16 +1,16 @@
 {
   "version": "48.0.0",
   "files": {
-    "6a2af369a4a372e14d8e41defb091864e27452df06518c5f8223b1914388f7e5": {
+    "5c1b8b1b7405359944a987ce0df6eb48431a9a666051d6611db63dc6c16f1023": {
       "displayName": "ObsidianLatexPdfStack Template",
       "source": {
         "path": "ObsidianLatexPdfStack.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "989646093931-eu-west-1-1b0e1c82": {
+        "989646093931-eu-west-1-03e45e09": {
           "bucketName": "cdk-default-assets-989646093931-eu-west-1",
-          "objectKey": "6a2af369a4a372e14d8e41defb091864e27452df06518c5f8223b1914388f7e5.json",
+          "objectKey": "5c1b8b1b7405359944a987ce0df6eb48431a9a666051d6611db63dc6c16f1023.json",
           "region": "eu-west-1",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::989646093931:role/cdk-default-file-publishing-role-989646093931-eu-west-1"
         }
