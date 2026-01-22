@@ -79,6 +79,45 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+function trimText(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen) + '\n... [truncated]';
+}
+
+function buildRenderErrorDetails(err: any, context: Record<string, unknown>): unknown {
+  const details: Record<string, unknown> = {
+    ...context,
+  };
+
+  if (err && typeof err.message === 'string') {
+    details.message = err.message;
+  }
+
+  const stdout = (err && (err.stdout ?? err.stdOut)) as unknown;
+  const stderr = (err && (err.stderr ?? err.stdErr)) as unknown;
+
+  if (typeof stdout === 'string' && stdout.trim().length > 0) {
+    details.stdout = trimText(stdout, 2000);
+  }
+  if (Buffer.isBuffer(stdout) && stdout.length > 0) {
+    details.stdout = trimText(stdout.toString('utf8'), 2000);
+  }
+
+  if (typeof stderr === 'string' && stderr.trim().length > 0) {
+    details.stderr = trimText(stderr, 2000);
+  }
+  if (Buffer.isBuffer(stderr) && stderr.length > 0) {
+    details.stderr = trimText(stderr.toString('utf8'), 2000);
+  }
+
+  return details;
+}
+
+function handleRenderError(reply: FastifyReply, err: any, context: Record<string, unknown>): void {
+  const details = buildRenderErrorDetails(err, context);
+  sendError(reply, 500, 'RENDER_ERROR', 'Rendering failed', details);
+}
+
 function verifyJwtFromHeader(request: FastifyRequest, reply: FastifyReply): boolean {
   // If no secret is configured, treat the API as public.
   if (!JWT_SECRET) {
@@ -121,6 +160,33 @@ export async function createServer(): Promise<FastifyInstance> {
   app.get('/health', healthHandler);
   app.get('/', healthHandler);
 
+  // Self-test endpoint that attempts a tiny render via the same pipeline used
+  // by normal requests. This is heavier than /health and intended for
+  // diagnostics only.
+  app.get('/self-test-render', async (request, reply) => {
+    if (!verifyJwtFromHeader(request, reply)) return;
+
+    try {
+      const buffer = await renderDocument(
+        Buffer.from('# Self-test\\n\\nThis is a self-test document.', 'utf8'),
+        'markdown',
+        'pdf',
+        {},
+      );
+
+      // We discard the actual PDF bytes, but report size and basic info.
+      reply.send({
+        status: 'ok',
+        service: 'obsidian-latex-pdf',
+        test: 'render',
+        outputBytes: buffer.length,
+      });
+    } catch (err: any) {
+      request.log.error({ err }, 'self-test-render failed');
+      return handleRenderError(reply, err, { endpoint: 'self-test-render' });
+    }
+  });
+
   // JSON endpoint
   app.post('/render-json', async (request: FastifyRequest<{ Body: RenderJsonRequestBody }>, reply: FastifyReply) => {
     if (!verifyJwtFromHeader(request, reply)) return;
@@ -140,12 +206,17 @@ export async function createServer(): Promise<FastifyInstance> {
       return sendError(reply, 400, 'INVALID_REQUEST', 'Unsupported output');
     }
 
-    const buffer = await renderDocument(Buffer.from(content, 'utf8'), format, output, options);
-    const contentType = output === 'pdf' ? 'application/pdf' : 'application/x-latex';
-    reply.header('Content-Type', contentType).send(buffer);
+    try {
+      const buffer = await renderDocument(Buffer.from(content, 'utf8'), format, output, options);
+      const contentType = output === 'pdf' ? 'application/pdf' : 'application/x-latex';
+      reply.header('Content-Type', contentType).send(buffer);
+    } catch (err: any) {
+      request.log.error({ err }, 'render-json failed');
+      return handleRenderError(reply, err, { endpoint: 'render-json' });
+    }
   });
 
-  // Multipart endpoint (stub implementation)
+  // Multipart endpoint
   app.post('/render-upload', async (request: FastifyRequest, reply: FastifyReply) => {
     if (!verifyJwtFromHeader(request, reply)) return;
 
@@ -181,9 +252,14 @@ export async function createServer(): Promise<FastifyInstance> {
 
     const meta = metadataPart ?? { format: 'markdown', output: 'pdf' };
 
-    const buffer = await renderDocument(fileBuffer, meta.format, meta.output, meta.options);
-    const contentType = meta.output === 'pdf' ? 'application/pdf' : 'application/x-latex';
-    reply.header('Content-Type', contentType).send(buffer);
+    try {
+      const buffer = await renderDocument(fileBuffer, meta.format, meta.output, meta.options);
+      const contentType = meta.output === 'pdf' ? 'application/pdf' : 'application/x-latex';
+      reply.header('Content-Type', contentType).send(buffer);
+    } catch (err: any) {
+      request.log.error({ err }, 'render-upload failed');
+      return handleRenderError(reply, err, { endpoint: 'render-upload' });
+    }
   });
 
   // init-upload endpoint
@@ -297,9 +373,14 @@ export async function createServer(): Promise<FastifyInstance> {
           }
         }
 
-        const buffer = await renderDocument(objectBuffer, format, output, options);
-        const contentType = output === 'pdf' ? 'application/pdf' : 'application/x-latex';
-        reply.header('Content-Type', contentType).send(buffer);
+        try {
+          const buffer = await renderDocument(objectBuffer, format, output, options);
+          const contentType = output === 'pdf' ? 'application/pdf' : 'application/x-latex';
+          reply.header('Content-Type', contentType).send(buffer);
+        } catch (err: any) {
+          request.log.error({ err, bucket, key }, 'render-from-s3 render failed');
+          return handleRenderError(reply, err, { endpoint: 'render-from-s3', bucket, key });
+        }
       } catch (err: any) {
         request.log.error({ err, bucket, key }, 'render-from-s3 failed');
         const code = err?.name || err?.Code;

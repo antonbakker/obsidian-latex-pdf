@@ -71299,6 +71299,37 @@ async function streamToBuffer(stream) {
   }
   return Buffer.concat(chunks);
 }
+function trimText(text, maxLen) {
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen) + "\n... [truncated]";
+}
+function buildRenderErrorDetails(err, context) {
+  const details = {
+    ...context
+  };
+  if (err && typeof err.message === "string") {
+    details.message = err.message;
+  }
+  const stdout = err && (err.stdout ?? err.stdOut);
+  const stderr = err && (err.stderr ?? err.stdErr);
+  if (typeof stdout === "string" && stdout.trim().length > 0) {
+    details.stdout = trimText(stdout, 2e3);
+  }
+  if (Buffer.isBuffer(stdout) && stdout.length > 0) {
+    details.stdout = trimText(stdout.toString("utf8"), 2e3);
+  }
+  if (typeof stderr === "string" && stderr.trim().length > 0) {
+    details.stderr = trimText(stderr, 2e3);
+  }
+  if (Buffer.isBuffer(stderr) && stderr.length > 0) {
+    details.stderr = trimText(stderr.toString("utf8"), 2e3);
+  }
+  return details;
+}
+function handleRenderError(reply, err, context) {
+  const details = buildRenderErrorDetails(err, context);
+  sendError(reply, 500, "RENDER_ERROR", "Rendering failed", details);
+}
 function verifyJwtFromHeader(request, reply) {
   if (!JWT_SECRET) {
     return true;
@@ -71330,6 +71361,26 @@ async function createServer() {
   });
   app.get("/health", healthHandler);
   app.get("/", healthHandler);
+  app.get("/self-test-render", async (request, reply) => {
+    if (!verifyJwtFromHeader(request, reply)) return;
+    try {
+      const buffer = await renderDocument(
+        Buffer.from("# Self-test\\n\\nThis is a self-test document.", "utf8"),
+        "markdown",
+        "pdf",
+        {}
+      );
+      reply.send({
+        status: "ok",
+        service: "obsidian-latex-pdf",
+        test: "render",
+        outputBytes: buffer.length
+      });
+    } catch (err) {
+      request.log.error({ err }, "self-test-render failed");
+      return handleRenderError(reply, err, { endpoint: "self-test-render" });
+    }
+  });
   app.post("/render-json", async (request, reply) => {
     if (!verifyJwtFromHeader(request, reply)) return;
     const { content, format: format2, output, options } = request.body;
@@ -71343,9 +71394,14 @@ async function createServer() {
     if (!["pdf", "latex"].includes(output)) {
       return sendError(reply, 400, "INVALID_REQUEST", "Unsupported output");
     }
-    const buffer = await renderDocument(Buffer.from(content, "utf8"), format2, output, options);
-    const contentType = output === "pdf" ? "application/pdf" : "application/x-latex";
-    reply.header("Content-Type", contentType).send(buffer);
+    try {
+      const buffer = await renderDocument(Buffer.from(content, "utf8"), format2, output, options);
+      const contentType = output === "pdf" ? "application/pdf" : "application/x-latex";
+      reply.header("Content-Type", contentType).send(buffer);
+    } catch (err) {
+      request.log.error({ err }, "render-json failed");
+      return handleRenderError(reply, err, { endpoint: "render-json" });
+    }
   });
   app.post("/render-upload", async (request, reply) => {
     if (!verifyJwtFromHeader(request, reply)) return;
@@ -71375,9 +71431,14 @@ async function createServer() {
       return sendError(reply, 413, "PAYLOAD_TOO_LARGE", "Uploaded file exceeds multipart limit");
     }
     const meta = metadataPart ?? { format: "markdown", output: "pdf" };
-    const buffer = await renderDocument(fileBuffer, meta.format, meta.output, meta.options);
-    const contentType = meta.output === "pdf" ? "application/pdf" : "application/x-latex";
-    reply.header("Content-Type", contentType).send(buffer);
+    try {
+      const buffer = await renderDocument(fileBuffer, meta.format, meta.output, meta.options);
+      const contentType = meta.output === "pdf" ? "application/pdf" : "application/x-latex";
+      reply.header("Content-Type", contentType).send(buffer);
+    } catch (err) {
+      request.log.error({ err }, "render-upload failed");
+      return handleRenderError(reply, err, { endpoint: "render-upload" });
+    }
   });
   app.post("/init-upload", async (request, reply) => {
     if (!verifyJwtFromHeader(request, reply)) return;
@@ -71468,9 +71529,14 @@ async function createServer() {
             return sendError(reply, 500, "INTERNAL_ERROR", "Unsupported S3 body type");
           }
         }
-        const buffer = await renderDocument(objectBuffer, format2, output, options);
-        const contentType = output === "pdf" ? "application/pdf" : "application/x-latex";
-        reply.header("Content-Type", contentType).send(buffer);
+        try {
+          const buffer = await renderDocument(objectBuffer, format2, output, options);
+          const contentType = output === "pdf" ? "application/pdf" : "application/x-latex";
+          reply.header("Content-Type", contentType).send(buffer);
+        } catch (err) {
+          request.log.error({ err, bucket, key }, "render-from-s3 render failed");
+          return handleRenderError(reply, err, { endpoint: "render-from-s3", bucket, key });
+        }
       } catch (err) {
         request.log.error({ err, bucket, key }, "render-from-s3 failed");
         const code = err?.name || err?.Code;

@@ -1,0 +1,13 @@
+Context: Troubleshooting curl command exit code 6 in obsidian-latex-pdf project.
+Question: Why is curl exiting with code 6 for `curl -s "https://$SERVICE_SUBDOMAIN/$SERVICE_DOMAIN/self-test-render" -H "Authorization Bearer $JWT_SECRET"` and how to fix it?
+Analysis:
+- Exit code 6 from curl means "Could not resolve host" (DNS resolution failure).
+- In the provided URL, only `$SERVICE_SUBDOMAIN` is part of the hostname; `$SERVICE_DOMAIN` is in the path due to the extra `/` instead of a `.`.
+- If `$SERVICE_SUBDOMAIN` is not a valid DNS name on its own (or is empty), curl cannot resolve it, causing exit code 6.
+- The Authorization header is also malformed; it should be `Authorization: Bearer <token>`, not `Authorization Bearer <token>`.
+What is unclear: Actual values of `$SERVICE_SUBDOMAIN` and `$SERVICE_DOMAIN`, and whether the intended host is `"$SERVICE_SUBDOMAIN.$SERVICE_DOMAIN"`.
+Outcome / result:
+- Explained that exit code 6 indicates host resolution failure.
+- Pointed out that the URL and header format are likely wrong.
+- Suggested a corrected command structure using `https://$SERVICE_SUBDOMAIN.$SERVICE_DOMAIN/...` and `-H "Authorization: Bearer $JWT_SECRET"`.
+Remaining work: User should verify environment variables and DNS configuration, and rerun curl with the corrected command.
