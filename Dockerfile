@@ -18,7 +18,7 @@ COPY src ./src
 # Copy templates
 COPY templates/article/template.tex /templates/article.tex
 COPY templates/business-plan/template.tex /templates/business-plan.tex
-COPY templates/common/template.tex /templates/common.tex
+COPY templates/common/callouts.tex /templates/common.tex
 COPY templates/ieee-proposal/template.tex /templates/ieee-proposal.tex
 COPY templates/kaobook/template.tex /templates/kaobook.tex
 COPY templates/koma-proposal/template.tex /templates/koma-proposal.tex
