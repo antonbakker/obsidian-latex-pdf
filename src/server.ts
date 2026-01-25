@@ -58,7 +58,20 @@ const JSON_MAX_BYTES = Number(process.env.JSON_MAX_BYTES ?? 1048576); // 1 MB
 const MULTIPART_MAX_BYTES = Number(process.env.MULTIPART_MAX_BYTES ?? 10485760); // 10 MB
 const S3_OBJECT_MAX_BYTES = Number(process.env.S3_OBJECT_MAX_BYTES ?? 104857600); // 100 MB
 const DEFAULT_LATEX_ENGINE = process.env.LATEX_ENGINE || 'xelatex';
-const JWT_SECRET = process.env.JWT_SECRET;
+
+function getJwtSecret(): string | undefined {
+  const value = process.env.JWT_SECRET;
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function getApiToken(): string | undefined {
+  const value = process.env.API_TOKEN;
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'eu-west-1',
@@ -118,9 +131,12 @@ function handleRenderError(reply: FastifyReply, err: any, context: Record<string
   sendError(reply, 500, 'RENDER_ERROR', 'Rendering failed', details);
 }
 
-function verifyJwtFromHeader(request: FastifyRequest, reply: FastifyReply): boolean {
-  // If no secret is configured, treat the API as public.
-  if (!JWT_SECRET) {
+function verifyAuthFromHeader(request: FastifyRequest, reply: FastifyReply): boolean {
+  const jwtSecret = getJwtSecret();
+  const apiToken = getApiToken();
+
+  // If no auth mechanism is configured, treat the API as public.
+  if (!jwtSecret && !apiToken) {
     return true;
   }
 
@@ -131,13 +147,27 @@ function verifyJwtFromHeader(request: FastifyRequest, reply: FastifyReply): bool
   }
 
   const token = header.toString().slice('Bearer '.length);
-  try {
-    jwt.verify(token, JWT_SECRET);
-    return true;
-  } catch {
+
+  if (apiToken) {
+    if (token === apiToken) {
+      return true;
+    }
     sendError(reply, 401, 'UNAUTHORIZED', 'Invalid or expired token');
     return false;
   }
+
+  if (jwtSecret) {
+    try {
+      jwt.verify(token, jwtSecret);
+      return true;
+    } catch {
+      sendError(reply, 401, 'UNAUTHORIZED', 'Invalid or expired token');
+      return false;
+    }
+  }
+
+  // Fallback: no auth configured at runtime.
+  return true;
 }
 
 // --- Server factory --------------------------------------------------------
@@ -164,7 +194,7 @@ export async function createServer(): Promise<FastifyInstance> {
   // by normal requests. This is heavier than /health and intended for
   // diagnostics only.
   app.get('/self-test-render', async (request, reply) => {
-    if (!verifyJwtFromHeader(request, reply)) return;
+    if (!verifyAuthFromHeader(request, reply)) return;
 
     try {
       const buffer = await renderDocument(
@@ -189,7 +219,7 @@ export async function createServer(): Promise<FastifyInstance> {
 
   // JSON endpoint
   app.post('/render-json', async (request: FastifyRequest<{ Body: RenderJsonRequestBody }>, reply: FastifyReply) => {
-    if (!verifyJwtFromHeader(request, reply)) return;
+    if (!verifyAuthFromHeader(request, reply)) return;
 
     const { content, format, output, options } = request.body;
 
@@ -218,7 +248,7 @@ export async function createServer(): Promise<FastifyInstance> {
 
   // Multipart endpoint
   app.post('/render-upload', async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!verifyJwtFromHeader(request, reply)) return;
+    if (!verifyAuthFromHeader(request, reply)) return;
 
     const parts = request.parts();
     let filePart: any;
@@ -264,7 +294,7 @@ export async function createServer(): Promise<FastifyInstance> {
 
   // init-upload endpoint
   app.post('/init-upload', async (request: FastifyRequest<{ Body: InitUploadRequestBody }>, reply: FastifyReply) => {
-    if (!verifyJwtFromHeader(request, reply)) return;
+    if (!verifyAuthFromHeader(request, reply)) return;
 
     const { fileName, contentType, expectedSizeBytes } = request.body;
 
@@ -309,7 +339,7 @@ export async function createServer(): Promise<FastifyInstance> {
   app.post(
     '/render-from-s3',
     async (request: FastifyRequest<{ Body: RenderFromS3RequestBody }>, reply: FastifyReply) => {
-      if (!verifyJwtFromHeader(request, reply)) return;
+      if (!verifyAuthFromHeader(request, reply)) return;
 
       const { bucket, key, format, output, options } = request.body;
 

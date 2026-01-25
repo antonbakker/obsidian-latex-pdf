@@ -15,6 +15,12 @@ vi.mock('../src/renderer', () => {
 describe('POST /render-json', () => {
   let app: Awaited<ReturnType<typeof createServer>>;
 
+  // Disable auth for tests so endpoints behave as public APIs
+  beforeEach(() => {
+    delete process.env.JWT_SECRET;
+    delete process.env.API_TOKEN;
+  });
+
   beforeEach(async () => {
     app = await createServer();
   });

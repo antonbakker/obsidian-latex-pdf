@@ -1,0 +1,9 @@
+Context: obsidian-latex-pdf HTTP API deployed behind a remote URL, with a Fastify server exposing /health and planned /self-test-render endpoints. Prior work added a /self-test-render route in src/server.ts and verified it via tests locally.
+
+Question: When running ./check_health.sh against the deployed service, GET /self-test-render returns a JSON 404 response: {"message":"Route GET:/self-test-render not found","error":"Not Found","statusCode":404}. Why is this route not found, and how to fix it?
+
+Unclear points: Whether ./check_health.sh targets the local server or the ECS/ALB endpoint; whether the remote service has been redeployed with the latest Docker image that includes the /self-test-render route; whether GitHub Actions successfully built and pushed that image.
+
+Analysis: The Fastify 404 message indicates that the running server instance does not have a handler registered for GET /self-test-render. The TypeScript source (src/server.ts) and tests confirm that /self-test-render is defined in the current codebase and passes tests locally. Therefore, the most likely cause is that the deployed container image is still an older build from before the /self-test-render route was added (CI had been failing earlier, preventing a new image from being published and deployed).
+
+Planned actions / outcomes: 1) Confirm that the local server built from current code exposes /self-test-render (curl to localhost after npm run build:server && node server.js). 2) Fix CI if needed so a new image is built and pushed. 3) Re-deploy the ECS/CDK stack to pick up the new image tag. 4) Re-run ./check_health.sh against the same endpoint; it should now return a 200 with the self-test payload instead of a Fastify 404. Remaining to be done: ensure deployment uses the latest image and verify the health script’s base URL matches the deployed service.

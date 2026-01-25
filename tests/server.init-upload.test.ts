@@ -19,6 +19,12 @@ import { createServer } from '../src/server';
 describe('POST /init-upload', () => {
   let app: Awaited<ReturnType<typeof createServer>>;
 
+  // Disable auth for tests so endpoint behaves as a public API
+  beforeEach(() => {
+    delete process.env.JWT_SECRET;
+    delete process.env.API_TOKEN;
+  });
+
   beforeEach(async () => {
     // Ensure INPUT_BUCKET_NAME is set for tests
     process.env.INPUT_BUCKET_NAME = 'test-bucket';

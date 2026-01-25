@@ -32,6 +32,12 @@ import { createServer } from '../src/server';
 describe('POST /render-from-s3', () => {
   let app: Awaited<ReturnType<typeof createServer>>;
 
+  // Disable auth for tests so endpoint behaves as a public API
+  beforeEach(() => {
+    delete process.env.JWT_SECRET;
+    delete process.env.API_TOKEN;
+  });
+
   beforeEach(async () => {
     headMock.mockReset();
     getMock.mockReset();

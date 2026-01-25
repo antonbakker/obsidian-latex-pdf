@@ -71284,7 +71284,18 @@ var JSON_MAX_BYTES = Number(process.env.JSON_MAX_BYTES ?? 1048576);
 var MULTIPART_MAX_BYTES = Number(process.env.MULTIPART_MAX_BYTES ?? 10485760);
 var S3_OBJECT_MAX_BYTES = Number(process.env.S3_OBJECT_MAX_BYTES ?? 104857600);
 var DEFAULT_LATEX_ENGINE2 = process.env.LATEX_ENGINE || "xelatex";
-var JWT_SECRET = process.env.JWT_SECRET;
+function getJwtSecret() {
+  const value = process.env.JWT_SECRET;
+  if (!value) return void 0;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : void 0;
+}
+function getApiToken() {
+  const value = process.env.API_TOKEN;
+  if (!value) return void 0;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : void 0;
+}
 var s3Client2 = new import_client_s32.S3Client({
   region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-west-1"
 });
@@ -71330,8 +71341,10 @@ function handleRenderError(reply, err, context) {
   const details = buildRenderErrorDetails(err, context);
   sendError(reply, 500, "RENDER_ERROR", "Rendering failed", details);
 }
-function verifyJwtFromHeader(request, reply) {
-  if (!JWT_SECRET) {
+function verifyAuthFromHeader(request, reply) {
+  const jwtSecret = getJwtSecret();
+  const apiToken = getApiToken();
+  if (!jwtSecret && !apiToken) {
     return true;
   }
   const header = request.headers["authorization"];
@@ -71340,13 +71353,23 @@ function verifyJwtFromHeader(request, reply) {
     return false;
   }
   const token = header.toString().slice("Bearer ".length);
-  try {
-    import_jsonwebtoken.default.verify(token, JWT_SECRET);
-    return true;
-  } catch {
+  if (apiToken) {
+    if (token === apiToken) {
+      return true;
+    }
     sendError(reply, 401, "UNAUTHORIZED", "Invalid or expired token");
     return false;
   }
+  if (jwtSecret) {
+    try {
+      import_jsonwebtoken.default.verify(token, jwtSecret);
+      return true;
+    } catch {
+      sendError(reply, 401, "UNAUTHORIZED", "Invalid or expired token");
+      return false;
+    }
+  }
+  return true;
 }
 async function createServer() {
   const app = (0, import_fastify.default)({
@@ -71362,7 +71385,7 @@ async function createServer() {
   app.get("/health", healthHandler);
   app.get("/", healthHandler);
   app.get("/self-test-render", async (request, reply) => {
-    if (!verifyJwtFromHeader(request, reply)) return;
+    if (!verifyAuthFromHeader(request, reply)) return;
     try {
       const buffer = await renderDocument(
         Buffer.from("# Self-test\\n\\nThis is a self-test document.", "utf8"),
@@ -71382,7 +71405,7 @@ async function createServer() {
     }
   });
   app.post("/render-json", async (request, reply) => {
-    if (!verifyJwtFromHeader(request, reply)) return;
+    if (!verifyAuthFromHeader(request, reply)) return;
     const { content, format: format2, output, options } = request.body;
     const rawLength = Buffer.byteLength(JSON.stringify(request.body), "utf8");
     if (rawLength > JSON_MAX_BYTES) {
@@ -71404,7 +71427,7 @@ async function createServer() {
     }
   });
   app.post("/render-upload", async (request, reply) => {
-    if (!verifyJwtFromHeader(request, reply)) return;
+    if (!verifyAuthFromHeader(request, reply)) return;
     const parts = request.parts();
     let filePart;
     let metadataPart;
@@ -71441,7 +71464,7 @@ async function createServer() {
     }
   });
   app.post("/init-upload", async (request, reply) => {
-    if (!verifyJwtFromHeader(request, reply)) return;
+    if (!verifyAuthFromHeader(request, reply)) return;
     const { fileName, contentType, expectedSizeBytes } = request.body;
     if (!fileName || !contentType) {
       return sendError(reply, 400, "INVALID_REQUEST", "fileName and contentType are required");
@@ -71476,7 +71499,7 @@ async function createServer() {
   app.post(
     "/render-from-s3",
     async (request, reply) => {
-      if (!verifyJwtFromHeader(request, reply)) return;
+      if (!verifyAuthFromHeader(request, reply)) return;
       const { bucket, key, format: format2, output, options } = request.body;
       if (!bucket || !key) {
         return sendError(reply, 400, "INVALID_REQUEST", "bucket and key are required");
