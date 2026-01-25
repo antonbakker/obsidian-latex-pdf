@@ -66,27 +66,37 @@ jobs:
             docker push $IMAGE_NAME:$IMAGE_VERSION
           fi
 
-      - name: Ensure GHCR package is public
+      - name: Ensure GHCR package is public (best-effort)
         if: github.ref_type == 'tag' || github.ref == 'refs/heads/master'
         env:
           GHCR_ADMIN_TOKEN: ${{ secrets.GHCR_ADMIN_TOKEN }}
         run: |
           OWNER="${{ github.repository_owner }}"
           PACKAGE_NAME="obsidian-latex-pdf"
-          echo "::group::Ensuring GHCR package visibility is public"
+          echo "::group::Ensuring GHCR package visibility is public (best-effort)"
           echo "Owner: $OWNER, Package: $PACKAGE_NAME"
 
           if [ -z "$GHCR_ADMIN_TOKEN" ]; then
-            echo "GHCR_ADMIN_TOKEN is not set; cannot enforce GHCR visibility."
-            exit 1
+            echo "GHCR_ADMIN_TOKEN is not set; skipping GHCR visibility enforcement."
+            echo "::endgroup::"
+            exit 0
           fi
 
           echo "$GHCR_ADMIN_TOKEN" | gh auth login --with-token
 
+          # Best-effort: do not fail the build if the package does not exist yet
+          # or the API call returns 404/other errors.
+          set +e
           gh api \
             -X PATCH \
             -H "Accept: application/vnd.github+json" \
             "/users/$OWNER/packages/container/$PACKAGE_NAME" \
             -f visibility=public
+          status=$?
+          set -e
+
+          if [ "$status" -ne 0 ]; then
+            echo "Warning: failed to update GHCR package visibility (status=$status). This will not fail the build."
+          fi
 
           echo "::endgroup::"
