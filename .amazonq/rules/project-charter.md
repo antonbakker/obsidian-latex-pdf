@@ -25,6 +25,10 @@ This project provides an Obsidian desktop-only plugin that exports markdown note
 - Settings tab for configuring export backend (direct vs Pandoc plugin), pandoc path, PDF engine, default template, and the Pandoc plugin command.
 - GitHub repository used for version control, BRAT distribution, and release tagging.
 - Node-based release helper script (scripts/release.js) plus npm scripts to bump versions in a controlled way.
+- Optional remote HTTP backend deployed via AWS CDK:
+  - ECS Fargate service behind an Application Load Balancer, optionally mapped to a custom domain via Route 53 and ACM.
+  - VPC spanning two Availability Zones with public and private subnets.
+  - **Single NAT gateway / Elastic IP** for outbound internet access from private subnets (non-critical service; AZ failure of the NAT’s AZ impacts outbound traffic but reduces cost versus multi-AZ NAT).
 
 ## Implemented Functionality
 

@@ -52,12 +52,18 @@ class ObsidianLatexPdfStack extends cdk.Stack {
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
         });
         // VPC + ECS cluster
-        const vpc = new ec2.Vpc(this, 'Vpc', { maxAzs: 2 });
+        const vpc = new ec2.Vpc(this, 'Vpc', {
+            maxAzs: 2,
+            // Non-critical service: use a single NAT gateway / Elastic IP to reduce cost.
+            // All private subnets will route through this one NAT; if its AZ fails,
+            // outbound internet access for tasks will be impacted.
+            natGateways: 1,
+        });
         const cluster = new ecs.Cluster(this, 'Cluster', { vpc });
         // Fargate service behind an ALB
         const service = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Service', {
             cluster,
-            desiredCount: 1,
+            desiredCount: props.desiredCount ?? 1,
             cpu: 512,
             memoryLimitMiB: 1024,
             publicLoadBalancer: true,

@@ -31,7 +31,13 @@ export class ObsidianLatexPdfStack extends cdk.Stack {
     });
 
     // VPC + ECS cluster
-    const vpc = new ec2.Vpc(this, 'Vpc', { maxAzs: 2 });
+    const vpc = new ec2.Vpc(this, 'Vpc', {
+      maxAzs: 2,
+      // Non-critical service: use a single NAT gateway / Elastic IP to reduce cost.
+      // All private subnets will route through this one NAT; if its AZ fails,
+      // outbound internet access for tasks will be impacted.
+      natGateways: 1,
+    });
     const cluster = new ecs.Cluster(this, 'Cluster', { vpc });
 
     // Fargate service behind an ALB

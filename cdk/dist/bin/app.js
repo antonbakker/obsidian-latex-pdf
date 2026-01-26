@@ -63,13 +63,30 @@ const imageName = `ghcr.io/${ghOwner}/obsidian-latex-pdf`;
 const imageTag = process.env.IMAGE_TAG || 'latest';
 // Optional domain configuration for HTTPS + DNS wiring.
 // SERVICE_DOMAIN: root domain, e.g. "example.com"
-// SERVICE_SUBDOMAIN: subdomain, e.g. "latex" → full host latex.example.com
+// SERVICE_SUBDOMAIN: subdomain, e.g. "latex"  full host latex.example.com
 const serviceDomain = process.env.SERVICE_DOMAIN;
 const serviceSubdomain = process.env.SERVICE_SUBDOMAIN;
+// Optional capacity profile for the Fargate service.
+// SERVICE_CAPACITY: "small" | "medium" | "large" (default: "small")
+const serviceCapacityEnv = (process.env.SERVICE_CAPACITY ?? 'small').toLowerCase();
+let desiredCount;
+switch (serviceCapacityEnv) {
+    case 'medium':
+        desiredCount = 2;
+        break;
+    case 'large':
+        desiredCount = 3;
+        break;
+    case 'small':
+    default:
+        desiredCount = 1;
+        break;
+}
 new obsidian_latex_pdf_stack_1.ObsidianLatexPdfStack(app, 'ObsidianLatexPdfStack', {
     env: { account, region },
     imageName,
     imageTag,
     serviceDomain,
     serviceSubdomain,
+    desiredCount,
 });
