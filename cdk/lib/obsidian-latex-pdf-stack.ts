@@ -13,8 +13,10 @@ export interface ObsidianLatexPdfStackProps extends cdk.StackProps {
   imageTag: string;  // e.g. "0.1.37" or "latest"
   /** Optional root domain, e.g. "example.com". */
   serviceDomain?: string;
-  /** Optional subdomain, e.g. "latex" → full host latex.example.com. */
+  /** Optional subdomain, e.g. "latex"  full host latex.example.com. */
   serviceSubdomain?: string;
+  /** Desired Fargate task count; defaults to 1 when omitted. */
+  desiredCount?: number;
 }
 
 export class ObsidianLatexPdfStack extends cdk.Stack {
@@ -35,7 +37,7 @@ export class ObsidianLatexPdfStack extends cdk.Stack {
     // Fargate service behind an ALB
     const service = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Service', {
       cluster,
-      desiredCount: 1,
+      desiredCount: props.desiredCount ?? 1,
       cpu: 512,
       memoryLimitMiB: 1024,
       publicLoadBalancer: true,

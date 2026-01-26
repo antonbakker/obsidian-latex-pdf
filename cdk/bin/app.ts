@@ -38,9 +38,26 @@ const imageTag = process.env.IMAGE_TAG || 'latest';
 
 // Optional domain configuration for HTTPS + DNS wiring.
 // SERVICE_DOMAIN: root domain, e.g. "example.com"
-// SERVICE_SUBDOMAIN: subdomain, e.g. "latex" → full host latex.example.com
+// SERVICE_SUBDOMAIN: subdomain, e.g. "latex"  full host latex.example.com
 const serviceDomain = process.env.SERVICE_DOMAIN;
 const serviceSubdomain = process.env.SERVICE_SUBDOMAIN;
+
+// Optional capacity profile for the Fargate service.
+// SERVICE_CAPACITY: "small" | "medium" | "large" (default: "small")
+const serviceCapacityEnv = (process.env.SERVICE_CAPACITY ?? 'small').toLowerCase();
+let desiredCount: number;
+switch (serviceCapacityEnv) {
+  case 'medium':
+    desiredCount = 2;
+    break;
+  case 'large':
+    desiredCount = 3;
+    break;
+  case 'small':
+  default:
+    desiredCount = 1;
+    break;
+}
 
 new ObsidianLatexPdfStack(app, 'ObsidianLatexPdfStack', {
   env: { account, region },
@@ -48,4 +65,5 @@ new ObsidianLatexPdfStack(app, 'ObsidianLatexPdfStack', {
   imageTag,
   serviceDomain,
   serviceSubdomain,
+  desiredCount,
 });
