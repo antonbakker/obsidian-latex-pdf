@@ -164,6 +164,41 @@ export async function exportNoteViaService(
     new Notice(`Remote LaTeX PDF exported: ${outputPath}`);
   } catch (error: any) {
     console.error("Remote export failed", error);
+
+    const message = (error && error.message) || "";
+    if (typeof message === "string") {
+      // DNS / name resolution failures (Electron/Chromium and Node-style messages).
+      if (
+        message.includes("ERR_NAME_NOT_RESOLVED") ||
+        message.includes("ENOTFOUND")
+      ) {
+        new Notice(
+          "Remote LaTeX PDF export failed: the service hostname could not be resolved. Check 'Remote service base URL' in the plugin settings and your DNS configuration.",
+        );
+        return;
+      }
+
+      // Connection refused / no listener on the target host:port.
+      if (message.includes("ECONNREFUSED")) {
+        new Notice(
+          "Remote LaTeX PDF export failed: the connection was refused. Ensure the remote service is deployed, running, and reachable from this device.",
+        );
+        return;
+      }
+
+      // Common TLS / certificate issues.
+      if (
+        message.includes("CERT_") ||
+        message.toLowerCase().includes("ssl") ||
+        message.toLowerCase().includes("tls")
+      ) {
+        new Notice(
+          "Remote LaTeX PDF export failed due to an HTTPS/SSL error. Verify the remote service certificate and that the base URL matches the certificate's hostname.",
+        );
+        return;
+      }
+    }
+
     new Notice("Remote LaTeX PDF export failed. Check console for details.");
   }
 }

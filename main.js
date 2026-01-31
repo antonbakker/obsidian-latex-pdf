@@ -526,6 +526,27 @@ async function exportNoteViaService(app, file, template, settings) {
     new import_obsidian3.Notice(`Remote LaTeX PDF exported: ${outputPath}`);
   } catch (error) {
     console.error("Remote export failed", error);
+    const message = error && error.message || "";
+    if (typeof message === "string") {
+      if (message.includes("ERR_NAME_NOT_RESOLVED") || message.includes("ENOTFOUND")) {
+        new import_obsidian3.Notice(
+          "Remote LaTeX PDF export failed: the service hostname could not be resolved. Check 'Remote service base URL' in the plugin settings and your DNS configuration."
+        );
+        return;
+      }
+      if (message.includes("ECONNREFUSED")) {
+        new import_obsidian3.Notice(
+          "Remote LaTeX PDF export failed: the connection was refused. Ensure the remote service is deployed, running, and reachable from this device."
+        );
+        return;
+      }
+      if (message.includes("CERT_") || message.toLowerCase().includes("ssl") || message.toLowerCase().includes("tls")) {
+        new import_obsidian3.Notice(
+          "Remote LaTeX PDF export failed due to an HTTPS/SSL error. Verify the remote service certificate and that the base URL matches the certificate's hostname."
+        );
+        return;
+      }
+    }
     new import_obsidian3.Notice("Remote LaTeX PDF export failed. Check console for details.");
   }
 }
@@ -1092,6 +1113,34 @@ function validateEnvironmentForTemplate(app, file, template, settings) {
       }
     }
   }
+  if (settings.exportBackend === "service") {
+    const rawUrl = (settings.serviceBaseUrl ?? "").trim();
+    if (!rawUrl) {
+      issues.push({
+        level: "error",
+        message: "Remote backend: 'Remote service base URL' is empty. Set a valid base URL (for example, https://latex.example.com) in the Obsidian LaTeX PDF settings or switch to a different backend."
+      });
+    } else {
+      try {
+        const parsed = new URL(rawUrl);
+        const hostname = parsed.hostname;
+        const looksLikeIp = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+        const isLocalhost = hostname === "localhost";
+        const hasDot = hostname.includes(".");
+        if (!looksLikeIp && !isLocalhost && !hasDot) {
+          issues.push({
+            level: "warning",
+            message: `Remote backend: service host '${hostname}' does not look like a fully qualified domain name. Ensure DNS is configured for this host or use the raw load balancer DNS name from your CloudFormation stack.`
+          });
+        }
+      } catch {
+        issues.push({
+          level: "error",
+          message: "Remote backend: 'Remote service base URL' is not a valid URL. Use a value like https://latex.example.com or https://your-alb-dns-name."
+        });
+      }
+    }
+  }
   return issues;
 }
 
@@ -1195,7 +1244,8 @@ var LatexPdfPlugin = class extends import_obsidian4.Plugin {
       pandocPath: this.settings.pandocPath,
       pdfEngineBinary: this.settings.pdfEngineBinary,
       enableLatexProfiles: this.settings.enableLatexProfiles,
-      latexProfileBaseDir: this.settings.latexProfileBaseDir
+      latexProfileBaseDir: this.settings.latexProfileBaseDir,
+      serviceBaseUrl: this.settings.serviceBaseUrl
     });
     if (envIssues.length) {
       validation.issues.push(...envIssues);

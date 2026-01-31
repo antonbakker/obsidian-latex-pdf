@@ -21,6 +21,8 @@ export interface EnvironmentSettingsLike {
   pdfEngineBinary: string;
   enableLatexProfiles?: boolean;
   latexProfileBaseDir?: string;
+  /** Optional base URL for the remote HTTP rendering service. */
+  serviceBaseUrl?: string;
 }
 
 /**
@@ -114,6 +116,42 @@ export function validateEnvironmentForTemplate(
               `LaTeX profile '${profileId}' is set in frontmatter, but no preamble.tex was found in '${baseDir}/${profileId}'. The profile will be ignored for this export.`,
           });
         }
+      }
+    }
+  }
+
+  // 4. Remote HTTP service backend sanity checks.
+  if (settings.exportBackend === "service") {
+    const rawUrl = (settings.serviceBaseUrl ?? "").trim();
+
+    if (!rawUrl) {
+      issues.push({
+        level: "error",
+        message:
+          "Remote backend: 'Remote service base URL' is empty. Set a valid base URL (for example, https://latex.example.com) in the Obsidian LaTeX PDF settings or switch to a different backend.",
+      });
+    } else {
+      try {
+        const parsed = new URL(rawUrl);
+        const hostname = parsed.hostname;
+
+        const looksLikeIp = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+        const isLocalhost = hostname === "localhost";
+        const hasDot = hostname.includes(".");
+
+        if (!looksLikeIp && !isLocalhost && !hasDot) {
+          issues.push({
+            level: "warning",
+            message:
+              `Remote backend: service host '${hostname}' does not look like a fully qualified domain name. Ensure DNS is configured for this host or use the raw load balancer DNS name from your CloudFormation stack.`,
+          });
+        }
+      } catch {
+        issues.push({
+          level: "error",
+          message:
+            "Remote backend: 'Remote service base URL' is not a valid URL. Use a value like https://latex.example.com or https://your-alb-dns-name.",
+        });
       }
     }
   }

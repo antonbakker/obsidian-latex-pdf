@@ -170,6 +170,7 @@ export default class LatexPdfPlugin extends Plugin {
       pdfEngineBinary: this.settings.pdfEngineBinary,
       enableLatexProfiles: this.settings.enableLatexProfiles,
       latexProfileBaseDir: this.settings.latexProfileBaseDir,
+      serviceBaseUrl: this.settings.serviceBaseUrl,
     });
     if (envIssues.length) {
       validation.issues.push(...envIssues);
